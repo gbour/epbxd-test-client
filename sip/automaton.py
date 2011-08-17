@@ -23,7 +23,7 @@ class OnResponse(object):
 """
 
 class Action(object):
-    def __init__(self, originator, action, timeout, callbacks):        
+    def __init__(self, originator, action, timeout, callbacks):
         self.originator = originator
         self.action     = action
         self.timeout    = timeout
@@ -31,6 +31,21 @@ class Action(object):
 
         _automaton.register(self)
 
+    def serialize(self):
+        """
+            NOTE: we cannot serialize callbacks 
+        """
+        import pickle
+        return pickle.dumps({
+            'id'        : id(self),
+            'originator': self.originator.name,
+            'action'    : self.action,
+            'timeout'   : self.timeout,
+        }, -1)
+
+    def trigger(self, event, *args, **kwargs):
+        if event in self.callbacks:
+            self.callbacks[event](self, *args, **kwargs)
 
 class AccountProxy(object):
     def __init__(self, name):

@@ -1,0 +1,15 @@
+
+account = accounts()[0]
+printit("registering %s account" % account)
+
+def do_timeout(accnt):
+    exit("%s: registration timeout" % account)
+
+account.register(timeout=10,
+    # accnt MUST BE equals to account
+    on_ok      = lambda accnt, msg: printit("%s (%s): registration successful (%s)" % (account, accnt, msg.status)),
+    on_timeout = do_timeout,
+    on_error   = lambda accnt, msg: exit("%s: cannot register (cause=%d)" % (accnt, msg.status))
+)
+
+printit("script execution continue during account registration...")

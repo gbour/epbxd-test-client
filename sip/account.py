@@ -108,7 +108,7 @@ class Account(object):
         """
         repl.info("%s account:\n . registration= %s" % (self.username, self._registration))
 
-    def do_register(self, *args):
+    def do_register(self, *args, **kwargs):
         """Register account at registrar.
         Send a REGISTER command to the registar, and handle the response.
         Usage: *account-name* register
@@ -126,6 +126,9 @@ class Account(object):
                 self._registration = 'not found'
                 repl.error("%s registration failed (not found)" % self.username)
 
+            if 'callback' in kwargs:
+                kwargs['callback'](self, callid, response)
+
         callid = self._m.do_request('REGISTER', self.registrar, {
             'cseq'       : self._cseq.next(),
             'local_ip'   : 'localhost',
@@ -135,7 +138,7 @@ class Account(object):
         }, response)
 
         self._registration = 'pending'
-        return True
+        return callid
 
     def do_dial(self, *args):
         """Dial a peer
