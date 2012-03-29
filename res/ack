@@ -1,7 +1,7 @@
 ACK sip:[remote_user]@[remote_ip]:[remote_port] SIP/2.0
 Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-To: <sip:[remote_user]@[remote_ip]:[remote_port]>[peer_tag_param]
-From: <sip:[local_user]@[local_ip]:[local_port]>;tag=[call_number]
+To: <sip:[remote_user]@[remote_ip]:[remote_port]>;tag=[to_tag]
+From: <sip:[local_user]@[local_ip]:[local_port]>;tag=[from_tag]
 Call-ID: [call_id]
 CSeq: [cseq] ACK
 Contact: <sip:[local_user]@[local_ip]:[local_port]>

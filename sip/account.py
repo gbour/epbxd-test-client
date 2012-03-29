@@ -14,6 +14,7 @@ class Account(object):
 
         self._register = 'none'
         self._cseq = self.__cseq__()
+        self.transactions = {}
 
     def set_manager(self, m):
         self._m = m
@@ -59,6 +60,8 @@ class Account(object):
                 self._m.repl.echo("Target %s not found" % args[0])
             elif resp.status == 100: # Trying
                 pass
+            elif resp.status == 200: # OK
+                self.transactions[resp.headers['call-id']] = resp
 
 
         callid = self._m.do_request('INVITE', (self.domain, self.port), {
@@ -69,3 +72,23 @@ class Account(object):
             'remote_user': args[0]
         }, response)
 
+    def do_ack(self, callid, *args):
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+        self._m.repl.echo("Sending ACK (transaction= %s)" % callid)
+
+        t = self.transactions[callid].headers
+
+        callid = self._m.do_request('ACK', (self.domain, self.port), {
+            'local_ip'   : 'localhost',
+            'local_port' : self.sips.portnum(),
+            'local_user' : t['from'].user,
+            'remote_user': t['to'].user,
+
+            # transaction values
+            'call_id'    : callid,
+            'branch'     : t['via'].params['branch'],
+            'to_tag'     : t['to'].params['tag'],
+            'from_tag'   : t['from'].params['tag'],
+            'cseq'       : t['cseq'].sequence,
+        })
