@@ -14,18 +14,22 @@ class SipSocket(async.dispatcher): #_with_send):
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connect((host,port))
 
+        self.getsockname = self.socket.getsockname
+        self.getpeername = self.socket.getpeername
+
     def handle_close(self):
         print self.addr, ":closing"
         self.close()
 
     def handle_read(self):
         raw = self.recv(8192)
-        self.callback(raw)
+        self.callback(self, raw)
 
 
 class SipServer(async.dispatcher):
-    def __init__(self):
+    def __init__(self, callback=None):
         async.dispatcher.__init__(self)
+        self.callback = callback
 
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
@@ -39,7 +43,7 @@ class SipServer(async.dispatcher):
             return
 
         sock, addr = pair
-        handler = SipSocket(sock)
+        handler = SipSocket(sock, callback=callback)
 
     def portnum(self):
         return self.socket.getsockname()[1]
