@@ -67,16 +67,15 @@ class Manager(object):
         mapping.update({
             'remote_ip'    : domain,
             'remote_port'  : port,
-            #'remote_user': mapping['local_user'],
             'transport'    : 'TCP',
-            'branch'       : mapping.get('branch', self.uuid()),
-            'call_number'  : self.uuid(),
-            'call_id'      : mapping.get('call_id', self.uuid()),
+            'branch'       : mapping.get('branch'  , self.uuid()),
+            'from_tag'     : mapping.get('from_tag', self.uuid()),
+            'to_tag'       : mapping.get('to_tag'  , self.uuid()),
+            'call_id'      : mapping.get('call_id' , self.uuid()),
             'local_ip_type': 4,
             'media_ip_type': 4,
             'media_ip'     : mapping['local_ip'],
             'media_port'   : 9000,
-            'peer_tag'     : self.uuid()
         })
 
         self.transactions[mapping['call_id']] = [action, None, callback]
