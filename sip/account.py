@@ -10,7 +10,7 @@ class Account(object):
         self.port     = port
 
         # open client port
-        self.sips     = SipServer()
+        self.sips     = SipServer(self.receive)
 
         self._register = 'none'
         self._cseq = self.__cseq__()
@@ -27,6 +27,12 @@ class Account(object):
         while True:
             cseq += 1
             yield cseq
+
+    def receive(self, data):
+        """Receive data from private socket
+        """
+        self._m.repl.echo("Account %s: receiving incoming message" % self.usermame)
+
 
     def do_status(self, *args):
         self._m.repl.echo("%s account:\n . registration= %s" % (self.username, self._register))
