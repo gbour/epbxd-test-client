@@ -35,8 +35,7 @@ class SipDecoder(object):
 
             lines   = raw[start:eoh].split("\r\n")
             som     = lines.pop(0)
-            headers = dict([self.decode_header(k, v) for (k,v) in 
-                [line.split(':', 1) for line in lines]])
+            headers = dict([self.decode_header(h) for h in lines])
 
             length = int(headers.get('content-length', 0))
             start  = eoh+4+length
@@ -57,9 +56,10 @@ class SipDecoder(object):
 
         return Request(p1, p2, headers, content)
 
-    def decode_header(self, name, raw):
-        name  = name.lower()
-        value = raw.strip()
+    def decode_header(self, header):
+        name, value = header.split(':',1)
+        name        = name.lower()
+        value       = value.strip()
 
         try:
             value = getattr(self, "decode_header_"+name)(value)
