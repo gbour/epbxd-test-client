@@ -1,0 +1,9 @@
+SIP/2.0 180 Ringing
+[last_Via:]
+[last_To:];tag=[to_tag]
+[last_From:]
+[last_Call-ID:]
+[last_CSeq:]
+Contact: <sip:[local_user]@[local_ip]:[local_port]>
+Content-Length: 0
+

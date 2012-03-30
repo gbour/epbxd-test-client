@@ -119,7 +119,6 @@ class Manager(object):
 		self.repl.echo(raw)
 		for msg in self.decoder.decode(raw):
 			self.repl.echo(str(msg))
-
 			getattr(self, 'handle_'+msg.__class__.__name__.lower())(msg)
 
 	def handle_response(self, resp):
@@ -134,6 +133,14 @@ class Manager(object):
 
 
 	def handle_request(self, req):
-		pass
+		"""
+			A request is incoming on a socket used to send data to the server (generic socket).
+			Must be redispatch to correct account (based on To header user)
+		"""
+		username = req.headers['to'].user
+		if username not in self.accounts:
+			self.repl.echo("Unknown targeted '%s' account" % username); return False
+
+		return getattr(self.accounts[username], 'req_'+req.method.lower())(req)
 
 

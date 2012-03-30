@@ -92,3 +92,36 @@ class Account(object):
             'from_tag'   : t['from'].params['tag'],
             'cseq'       : t['cseq'].sequence,
         })
+
+    def do_ringing(self, callid, *args):
+        """Send a Ringing response
+
+        """
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+
+        t = self.transactions[callid].headers
+        self._m.do_request('ringing', (self.domain, self.port), {
+            'local_ip'     : 'localhost',
+            'local_port'   : self.sips.portnum(),
+            'local_user'   : t['from'].user,
+
+            'last_Via:'    : str(t['via']),
+            'last_To:'     : str(t['to']),
+            'last_From:'   : str(t['from']),
+            'last_Call-ID:': str(t['call-id']),
+            'last_CSeq'    : str(t['cseq']),
+
+            # transaction values
+            'to_tag'       : self._m.uuid(), # generate To tag
+        })
+
+    ## Handle requests
+    def req_invite(self, req):
+        """INVITE request
+
+            save transaction
+        """
+        self.transactions[req.headers['call-id']] = req
+
+        return True
