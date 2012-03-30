@@ -97,8 +97,8 @@ class Manager(object):
         msg = msg.replace('[len]', str(length))
 
         conn = self.get_connection(domain, port)
-        self.repl.echo("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
-        self.repl.echo(msg)
+        self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
+        self.repl.debug(msg)
     
         ret  = conn.send(msg)
         return mapping['call_id']
@@ -115,8 +115,8 @@ class Manager(object):
         return conn
 
     def receive(self, sock, raw):
-        self.repl.echo("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
-        self.repl.echo(raw)
+        self.repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
+        self.repl.debug(raw)
         for msg in self.decoder.decode(raw):
             self.repl.echo(str(msg))
             getattr(self, 'handle_'+msg.__class__.__name__.lower())(msg)

@@ -20,8 +20,12 @@ class Repl(asyncore.file_dispatcher):
         self.buffer = []
         asyncore.file_dispatcher.__init__(self, sys.stdin)
 
+        #TODO: erase or append option
+        self.logf = open('./trace.log', 'w')
+
     def cleanup(self):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+        self.logf.close()
 
     def handle_read(self):
         c = self.recv(1)
@@ -51,3 +55,8 @@ class Repl(asyncore.file_dispatcher):
 
     def prompt(self, content=''):
         sys.stdout.write("\n[.]> "+content)
+
+
+    def debug(self, data):
+        self.logf.write(data)
+        self.echo(data)
