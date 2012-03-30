@@ -74,8 +74,12 @@ class SipDecoder(object):
         """
 
             To: <sip:101@localhost:58129>;tag=as2aa26b43
+            To: "101" <sip:101@localhost:58129>;tag=as2aa26b43
         """
-        m =	re.match("^<(?P<proto>[^:]+):(?P<user>[^:@]+)@(?P<host>[^:;]+)(?::(?P<port>\d+))?>(?P<params>.*)$", raw)
+        m =	re.match(
+            "^\s*(?:\"(?P<displayname>[^\"]*)\"\s+)?<(?P<proto>[^:]+):(?P<user>[^:@]+)@(?P<host>[^:;]+)(?::(?P<port>\d+))?>(?P<params>.*)$",
+            raw
+        )
         if m is None:
             raise Exception
 
