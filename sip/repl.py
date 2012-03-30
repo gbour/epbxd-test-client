@@ -23,6 +23,44 @@ class Repl(asyncore.file_dispatcher):
         #TODO: erase or append option
         self.logf = open('./trace.log', 'w')
 
+        # ANSI sequences
+        """ ANSI sequences
+        
+            An ANSI sequence starts with ´ (0x27) character and is followed by several keys
+            i.e: up arrow is e-s "´[A"
+        """
+        self.ansi_mode   = False
+        self.ansi_buffer = ""
+        self.sequences   = [
+            "[A",	# up arrow
+            "[B", # down arrow
+            "[C", # right arrow
+            "[D", # left arrow
+
+            "[2~", # insert
+            "[3~", # suppr
+            "OH" , # home
+            "OF" , # end
+            "[5~" , # page up
+            "[6~" , # page down
+            "[1~", # home (keypad)
+            "[4~", # end (keypad)
+            "[E", # keypad middle key (5)
+            "OP", # f1
+            "OQ", # f2
+            "OR", # f3
+            "OS", # f4
+            "[15~", # f5
+            "[17~", # f6
+            "[18~", # f7
+            "[19~", # f8
+            "[20~", # f9
+            "[21~", # f10
+            "[23~", # f11 ??
+            "[24~", # f12
+        ]
+
+
     def cleanup(self):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
         self.logf.close()
@@ -30,8 +68,19 @@ class Repl(asyncore.file_dispatcher):
     def handle_read(self):
         c = self.recv(1)
 
+        if self.ansi_mode:
+            self.ansi_buffer += c
+            if self.ansi_buffer in self.sequences:
+                self.ansi_mode = False
+
+            return
+
+        # start-of ANSI sequence
+        if ord(c) == 27:
+            self.ansi_mode = True; self.ansi_buffer = ""; return
+
         # carriage return
-        if c == '\n':
+        elif c == '\n':
             # do the job
             self.callback(''.join(self.buffer))
 
