@@ -66,9 +66,11 @@ class Account(object):
                 self._m.repl.echo("Target %s not found" % args[0])
             elif resp.status == 100: # Trying
                 pass
+            elif resp.status == 180: # Ringing
+                self._m.repl.echo("Remove called endpoint '%s' is ringing" % args[0])
             elif resp.status == 200: # OK
                 self.transactions[resp.headers['call-id']] = resp
-
+                self._m.repl.echo("%s: Call established" % self.username)
 
         callid = self._m.do_request('INVITE', (self.domain, self.port), {
             'cseq'       : self._cseq.next(),
@@ -107,20 +109,45 @@ class Account(object):
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
         t = self.transactions[callid].headers
+        t['resp_to_tag'] = self._m.uuid()
+
         self._m.do_request('ringing', (self.domain, self.port), {
             'local_ip'     : 'localhost',
             'local_port'   : self.sips.portnum(),
-            'local_user'   : t['from'].user,
+            'local_user'   : self.username,
 
-            'last_Via:'    : str(t['via']),
-            'last_To:'     : str(t['to']),
-            'last_From:'   : str(t['from']),
-            'last_Call-ID:': str(t['call-id']),
-            'last_CSeq'    : str(t['cseq']),
+            'last_Via:'    : "Via: "     + str(t['via']),
+            'last_To:'     : "To: "      + str(t['to']),
+            'last_From:'   : "From: "    + str(t['from']),
+            'last_Call-ID:': "Call-ID: " + str(t['call-id']),
+            'last_CSeq:'   : "CSeq: "    + str(t['cseq']),
 
             # transaction values
-            'to_tag'       : self._m.uuid(), # generate To tag
+            'to_tag'       : t['resp_to_tag'], # generate To tag
         })
+
+    def do_ok(self, callid, *args):
+        """Send a OK response
+        """
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+
+        t = self.transactions[callid].headers
+        self._m.do_request('ok', (self.domain, self.port), {
+            'local_ip'     : 'localhost',
+            'local_port'   : self.sips.portnum(),
+            'local_user'   : self.username,
+
+            'last_Via:'    : "Via: "     + str(t['via']),
+            'last_To:'     : "To: "      + str(t['to']),
+            'last_From:'   : "From: "    + str(t['from']),
+            'last_Call-ID:': "Call-ID: " + str(t['call-id']),
+            'last_CSeq:'   : "CSeq: "    + str(t['cseq']),
+
+            # transaction values
+            'to_tag'       : t['resp_to_tag'],
+        })
+
 
     ## Handle requests
     def req_invite(self, req):
@@ -131,3 +158,15 @@ class Account(object):
         self.transactions[req.headers['call-id']] = req
 
         return True
+
+    def req_ack(self, req):
+        """ACK request
+
+            acknowledge a transaction
+        """
+        callid = req.headers['call-id']
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+
+        t = self.transactions[callid].headers
+        self._m.repl.echo("%s: Call established" % self.username)
