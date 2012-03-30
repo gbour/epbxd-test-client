@@ -29,6 +29,8 @@ class Repl(asyncore.file_dispatcher):
 
     def handle_read(self):
         c = self.recv(1)
+
+        # carriage return
         if c == '\n':
             # do the job
             self.callback(''.join(self.buffer))
@@ -37,9 +39,14 @@ class Repl(asyncore.file_dispatcher):
             del self.buffer[:]
             self.prompt(); return
 
-        elif c == '\b':
+        # backspace
+        elif c == '\b' or ord(c) == 127:
             if len(self.buffer) > 0:
+                l = len(self.buffer[-1].expandtabs())
+                sys.stdout.write('\b'*l + ' '*l + '\b'*l)
                 del self.buffer[-1]
+
+            return
 
         sys.stdout.write(c)
         self.buffer.append(c)
