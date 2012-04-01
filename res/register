@@ -5,6 +5,7 @@ To: <sip:[remote_user]@[remote_ip]:[local_port]>
 Call-ID: [call_id]
 CSeq: [cseq] REGISTER
 Expires: 300
+User-Agent: [ua]
 Contact: sip:[local_user]@[local_ip]:[local_port]
 Content-Length: 0
 

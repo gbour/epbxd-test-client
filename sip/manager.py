@@ -76,6 +76,7 @@ class Manager(object):
             'media_ip_type': 4,
             'media_ip'     : mapping['local_ip'],
             'media_port'   : 9000,
+            'ua'           : 'epbxd-pytest 0.1',
         })
 
         self.transactions[mapping['call_id']] = [action, None, callback]
