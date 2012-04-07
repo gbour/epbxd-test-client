@@ -34,7 +34,6 @@ class Account(object):
         self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
         self._m.receive(sock, data)
 
-
     def do_status(self, *args):
         self._m.repl.echo("%s account:\n . registration= %s" % (self.username, self._register))
 
@@ -134,6 +133,8 @@ class Account(object):
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
         t = self.transactions[callid].headers
+        t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
+
         self._m.do_request('ok', (self.domain, self.port), {
             'local_ip'     : 'localhost',
             'local_port'   : self.sips.portnum(),
