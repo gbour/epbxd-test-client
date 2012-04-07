@@ -23,6 +23,10 @@ class SipSocket(async.dispatcher): #_with_send):
 
     def handle_read(self):
         raw = self.recv(8192)
+
+        if self.callback is None:
+            print "no callback defined on %s" % (self.getsockname()); return
+
         self.callback(self, raw)
 
 
@@ -43,7 +47,7 @@ class SipServer(async.dispatcher):
             return
 
         sock, addr = pair
-        handler = SipSocket(sock, callback=callback)
+        handler = SipSocket(sock, callback=self.callback)
 
     def portnum(self):
         return self.socket.getsockname()[1]

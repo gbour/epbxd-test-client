@@ -28,10 +28,11 @@ class Account(object):
             cseq += 1
             yield cseq
 
-    def receive(self, data):
+    def receive(self, sock, data):
         """Receive data from private socket
         """
-        self._m.repl.echo("Account %s: receiving incoming message" % self.usermame)
+        self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
+        self._m.receive(sock, data)
 
 
     def do_status(self, *args):
@@ -59,7 +60,7 @@ class Account(object):
         self._register = 'pending'
 
     def do_dial(self, *args):
-        self._m.repl.echo("Dialing %s" % args[0])
+        self._m.repl.echo("%s: Dialing %s" % (self.username, args[0]))
 
         def response(callid, resp):
             if   resp.status == 404:
@@ -67,7 +68,7 @@ class Account(object):
             elif resp.status == 100: # Trying
                 pass
             elif resp.status == 180: # Ringing
-                self._m.repl.echo("Remove called endpoint '%s' is ringing" % args[0])
+                self._m.repl.echo("Remote called endpoint '%s' is ringing" % args[0])
             elif resp.status == 200: # OK
                 self.transactions[resp.headers['call-id']] = resp
                 self._m.repl.echo("%s: Call established" % self.username)
