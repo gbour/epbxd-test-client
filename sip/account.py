@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
-from sip import SipServer
+from struct      import *
+from collections import namedtuple
+from sip         import SipServer
 
 class Account(object):
     def __init__(self, username, domain, port=5060):
@@ -15,6 +17,7 @@ class Account(object):
         self._register = 'none'
         self._cseq = self.__cseq__()
         self.transactions = {}
+        self.rtp_ports = {}
 
     def set_manager(self, m):
         self._m = m
@@ -33,6 +36,38 @@ class Account(object):
         """
         self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
         self._m.receive(sock, data)
+
+    def receive_rtp(self, sock, data):
+        """Receive RTP data
+        """
+        self._m.repl.echo("%s: receiving RTP data" % self.username)
+
+        Rtp = namedtuple('Rtp', 'version padding exten cc marker ptype sequence timestamp ssrc')
+        (pad1, pad2, seq, tstamp, ssrc) = unpack('!ccHII', data[:12])
+        pad1 = ord(pad1)
+        pad2 = ord(pad2)
+
+        rtp = Rtp._make([
+            # version (2 bits)
+            pad1 >> 6,
+            # padding (1 bit)
+            pad1 & 32 >> 5,
+            # exten (1 bit)
+            pad1 & 16 >> 4,
+            # CSRC count (4 bits)
+            pad1 & 15,
+            # parker (1 bit)
+            pad2 >> 7,
+            # payload type (7 bits)
+            pad2 & 127,
+
+            seq, tstamp, ssrc
+        ])
+
+        csrcs = unpack('!' + 'I'*rtp.cc, data[12:12+4*rtp.cc])
+        # RTP header
+        print rtp, ",csrcs=", csrcs, ",payload=",	(len(data)-12-4*rtp.cc)
+
 
     def do_status(self, *args):
         self._m.repl.echo("%s account:\n . registration= %s" % (self.username, self._register))
@@ -72,13 +107,20 @@ class Account(object):
                 self.transactions[resp.headers['call-id']] = resp
                 self._m.repl.echo("%s: Call established" % self.username)
 
+        rtps = SipServer(self.receive_rtp, mode='udp')
+        self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
+
         callid = self._m.do_request('INVITE', (self.domain, self.port), {
             'cseq'       : self._cseq.next(),
             'local_ip'   : 'localhost',
             'local_port' : self.sips.portnum(),
             'local_user' : self.username,
-            'remote_user': args[0]
+            'remote_user': args[0],
+
+            'media_port' : rtps.getsockname()[1],
         }, response)
+
+        self.rtp_ports[callid] = [rtps, None]
 
     def do_ack(self, callid, *args):
         if callid not in self.transactions:

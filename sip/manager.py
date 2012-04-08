@@ -75,7 +75,7 @@ class Manager(object):
             'local_ip_type': 4,
             'media_ip_type': 4,
             'media_ip'     : mapping['local_ip'],
-            'media_port'   : 9000,
+            'media_port'   : mapping.get('media_port', 0),
             'ua'           : 'epbxd-pytest 0.1',
         })
 

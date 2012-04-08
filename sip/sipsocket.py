@@ -31,15 +31,18 @@ class SipSocket(async.dispatcher): #_with_send):
 
 
 class SipServer(async.dispatcher):
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, mode='tcp'):
         async.dispatcher.__init__(self)
         self.callback = callback
 
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.create_socket(socket.AF_INET, 
+                socket.SOCK_DGRAM if mode == 'udp' else socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind(('localhost', 0))
 
-        self.listen(5)
+        if mode != 'udp':
+            print 'listen'
+            self.listen(5)
 
     def handle_accept(self):
         pair = self.accept()
@@ -51,4 +54,13 @@ class SipServer(async.dispatcher):
 
     def portnum(self):
         return self.socket.getsockname()[1]
+
+    def handle_read(self):
+        raw = self.recv(8192)
+
+        if self.callback is None:
+            print "no callback defined on %s" % (self.getsockname()); return
+
+        self.callback(self, raw)
+
 
