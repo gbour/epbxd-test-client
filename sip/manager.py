@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
-import os, re, uuid
+import os, re, uuid, time
 from sip import repl
 from sip.sipsocket import SipSocket
 from sip.decoder   import *
@@ -23,6 +23,9 @@ class Manager(object):
                 self.raw_messages[filename.lower()] = f.read()
 
         self.decoder = SipDecoder()
+
+        # scheduled actions
+        self._scheduler = []
 
     def add_account(self, accnt):
         self.accounts[accnt.username] = accnt
@@ -145,3 +148,21 @@ class Manager(object):
         return getattr(self.accounts[username], 'req_'+req.method.lower())(req)
 
 
+    def add_scheduled_action(self, step, callback):
+        self._scheduler.append([time.time(), step, callback])
+
+    def scheduler(self):
+        now = time.time()
+
+        deletes = []
+        for action in self._scheduler:
+            if action[0] > now:
+                continue
+
+            if action[2]():
+                action[0] += action[1]
+            else:
+                deletes.append(action)
+
+        for x in deletes:
+            self._scheduler.remove(x)

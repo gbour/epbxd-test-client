@@ -12,15 +12,20 @@ if __name__ == '__main__':
     #sips = sip.SipServer(repl)
     for name in ('101','102'):
         acc = Account(name,'localhost',5060)
+        #acc = Account(name,'localhost',7779)
         m.add_account(acc)
 
         m.repl.echo("Account %s listening on %d port" % (acc.username, acc.sips.portnum()))
     m.repl.flush()
 
-    try:
-        asyncore.loop()
-    except KeyboardInterrupt:
-        pass
+    while True:
+        try:
+            # interrupt each 10 ms
+            asyncore.loop(timeout=.01, count=1)
+            m.scheduler()
+
+        except KeyboardInterrupt:
+            break
 
     print '\nend...'
     m.repl.cleanup()

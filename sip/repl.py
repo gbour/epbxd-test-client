@@ -165,3 +165,8 @@ class Repl(asyncore.file_dispatcher):
         self.history.append(command)
         self.histf.write(command+'\n')
 
+    def writable(self):
+        """
+            NOTE: if writable() not set to False, file socket is NON-BLOCKING (using select())
+        """
+        return False
