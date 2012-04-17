@@ -5,13 +5,14 @@ import socket
 import asyncore as async
 
 class SipSocket(async.dispatcher): #_with_send):
-    def __init__(self, sock=None, host=None, port=5060, callback=None):
+    def __init__(self, sock=None, host=None, port=5060, callback=None, mode='tcp'):
         #async.dispatcher_with_send.__init__(self, sock)
         async.dispatcher.__init__(self, sock)
 
         self.callback = callback
         if sock is None:
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.create_socket(socket.AF_INET, socket.SOCK_STREAM if mode == 'tcp' else
+                    socket.SOCK_DGRAM)
             self.connect((host,port))
 
         self.getsockname = self.socket.getsockname

@@ -1,9 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
+import random, time, os.path
 from struct      import *
 from collections import namedtuple
-from sip         import SipServer
+from sipsocket   import *
+
+# name and matching RTP type
+ENCODINGS = {
+    'ulaw': 0,
+    'gsm' : 3,
+    'alaw': 8,
+}
+
 
 class Account(object):
     def __init__(self, username, domain, port=5060):
@@ -192,6 +201,53 @@ class Account(object):
             'to_tag'       : t['resp_to_tag'],
         })
 
+    def do_play(self, callid, encoding, filename):
+        """
+
+            NOTE: we presume file is in PCM A-LAW format
+        """
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+
+        if encoding not in ENCODINGS:
+            self._m.repl.echo("%s: unknown '%s' encoding" % (self.username, encoding))
+            return False
+
+        if not os.path.exists(filename):
+            self._m.repl.echo("%s: file '%s' does not exists" % (self.username,	filename))
+            return False
+
+        t = self.transactions[callid]
+        # connecting to peer RTP socket
+        rtp_sock = SipSocket(host=t.payload.media_host, port=t.payload.media_port, mode='udp')
+
+        pad1 = 2 << 6
+        pad2 = ENCODINGS[encoding]
+
+        # seq & tstamp are modified by nested method
+        class Namespace: pass
+        ns = Namespace()
+        ns.seq  = random.randint(0, 32768)
+        ns.tstamp = random.randint(0, 2**30)
+        ssrc   = random.randint(0, 2**32)
+
+        f = open(filename, 'rb')
+
+        def send_rtp():
+            rtp = f.read(160)
+            if len(rtp) == 0:
+                rtp_sock.close(); f.close(); return False
+
+            rtp = pack('!ccHII', chr(pad1), chr(pad2), ns.seq, ns.tstamp, ssrc) + rtp
+            rtp_sock.send(rtp)
+
+            ns.seq += 1; ns.tstamp += 160
+            return True
+
+        self._m.repl.echo("%s: start sending RTP datas" % self.username);
+        self._m.add_scheduled_action(.02, send_rtp)
+        return True
+
 
     ## Handle requests
     def req_invite(self, req):
@@ -214,3 +270,5 @@ class Account(object):
 
         t = self.transactions[callid].headers
         self._m.repl.echo("%s: Call established" % self.username)
+
+
