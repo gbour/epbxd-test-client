@@ -4,8 +4,44 @@
 import re
 from collections import namedtuple
 
-Request  = namedtuple('Request', 'method uri headers content')
-Response = namedtuple('Response', 'status reason headers content')
+Request  = namedtuple('Request', 'method uri headers payload')
+Response = namedtuple('Response', 'status reason headers payload')
+
+
+class SDP(object):
+    def __init__(self):
+        self.media_host = "::"
+        self.media_port = 0
+
+    def parse(self, raw):
+        for k, v in [i.split('=') for i in raw.split('\r\n')[:-2]]:
+            if not hasattr(self, '_decode_'+k):
+                continue
+
+            getattr(self, '_decode_'+k)(v)
+
+    def _decode_c(self, raw):
+        """
+
+            c=IN IP4 192.168.10.22
+        """
+        (family, version, self.media_host) = raw.split(' ')
+
+    def _decode_m(self, raw):
+        """
+
+            m=audio 48521 RTP/AVP 8 0
+        """
+        (media, port, transport, fmts) = raw.split(' ', 3)
+
+        self.media_port = int(port)
+
+    def __str__(self):
+        return "SDP(%s:%d)" % (self.media_host, self.media_port)
+
+    def __repr__(self):
+        return str(self)
+
 
 class Header(object):
     def __init__(self, raw, fields):
@@ -50,11 +86,14 @@ class SipDecoder(object):
             Instanciate Request() or Response() tuple
         """
         (p1,p2,p3) = som.split(' ', 2)
+
+        payload = SDP()
+        payload.parse(content)
         if p1.startswith('SIP/'):
             # response
-            return Response(int(p2), p3, headers, content)
+            return Response(int(p2), p3, headers, payload)
 
-        return Request(p1, p2, headers, content)
+        return Request(p1, p2, headers, payload)
 
     def decode_header(self, header):
         name, value = header.split(':',1)
