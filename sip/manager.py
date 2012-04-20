@@ -118,7 +118,7 @@ class Manager(object):
 
         return conn
 
-    def receive(self, sock, raw):
+    def receive(self, sock, raw, extra):
         self.repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
         self.repl.debug(raw)
         for msg in self.decoder.decode(raw):

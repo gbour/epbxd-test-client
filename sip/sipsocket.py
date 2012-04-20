@@ -5,11 +5,13 @@ import socket
 import asyncore as async
 
 class SipSocket(async.dispatcher): #_with_send):
-    def __init__(self, sock=None, host=None, port=5060, callback=None, mode='tcp'):
+    def __init__(self, sock=None, host=None, port=5060, callback=None, data=None, mode='tcp'):
         #async.dispatcher_with_send.__init__(self, sock)
         async.dispatcher.__init__(self, sock)
 
         self.callback = callback
+        self.data     = data
+
         if sock is None:
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM if mode == 'tcp' else
                     socket.SOCK_DGRAM)
@@ -28,13 +30,17 @@ class SipSocket(async.dispatcher): #_with_send):
         if self.callback is None:
             print "no callback defined on %s" % (self.getsockname()); return
 
-        self.callback(self, raw)
+        self.callback(self, raw, self.data)
+
+    def __repr__(self):
+        return "SipSocket(%s:%d)" % self.getsockname()
 
 
 class SipServer(async.dispatcher):
-    def __init__(self, callback=None, mode='tcp'):
+    def __init__(self, callback=None, mode='tcp', data=None):
         async.dispatcher.__init__(self)
         self.callback = callback
+        self.data     = data
 
         self.create_socket(socket.AF_INET, 
                 socket.SOCK_DGRAM if mode == 'udp' else socket.SOCK_STREAM)
@@ -51,7 +57,7 @@ class SipServer(async.dispatcher):
             return
 
         sock, addr = pair
-        handler = SipSocket(sock, callback=self.callback)
+        handler = SipSocket(sock, callback=self.callback, data=data)
 
     def portnum(self):
         return self.socket.getsockname()[1]
@@ -62,6 +68,5 @@ class SipServer(async.dispatcher):
         if self.callback is None:
             print "no callback defined on %s" % (self.getsockname()); return
 
-        self.callback(self, raw)
-
+        self.callback(self, raw, self.data)
 

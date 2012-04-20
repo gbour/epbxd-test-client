@@ -26,6 +26,7 @@ class Account(object):
         self._register = 'none'
         self._cseq = self.__cseq__()
         self.transactions = {}
+        self.rtp_dump_files = {}
         self.rtp_ports = {}
 
     def set_manager(self, m):
@@ -40,16 +41,16 @@ class Account(object):
             cseq += 1
             yield cseq
 
-    def receive(self, sock, data):
+    def receive(self, sock, data, extra):
         """Receive data from private socket
         """
         self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
         self._m.receive(sock, data)
 
-    def receive_rtp(self, sock, data):
+    def receive_rtp(self, sock, data, callid):
         """Receive RTP data
         """
-        self._m.repl.echo("%s: receiving RTP data" % self.username)
+        self._m.repl.echo("%s: receiving RTP data (callid= %s)" % (self.username, callid))
 
         Rtp = namedtuple('Rtp', 'version padding exten cc marker ptype sequence timestamp ssrc')
         (pad1, pad2, seq, tstamp, ssrc) = unpack('!ccHII', data[:12])
@@ -75,7 +76,11 @@ class Account(object):
 
         csrcs = unpack('!' + 'I'*rtp.cc, data[12:12+4*rtp.cc])
         # RTP header
-        print rtp, ",csrcs=", csrcs, ",payload=",	(len(data)-12-4*rtp.cc)
+        self._m.repl.echo("%s, csrcs=%s, payload=%d" % 
+                (str(rtp), str(csrcs),	(len(data)-12-4*rtp.cc)))
+
+        if callid in self.rtp_dump_files:
+            self.rtp_dump_files[callid].write(data[12+4*rtp.cc:])
 
 
     def do_status(self, *args):
@@ -116,10 +121,12 @@ class Account(object):
                 self.transactions[resp.headers['call-id']] = resp
                 self._m.repl.echo("%s: Call established" % self.username)
 
-        rtps = SipServer(self.receive_rtp, mode='udp')
+        callid = self._m.uuid()
+        rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
         self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
 
         callid = self._m.do_request('INVITE', (self.domain, self.port), {
+            'call_id'    : callid,
             'cseq'       : self._cseq.next(),
             'local_ip'   : 'localhost',
             'local_port' : self.sips.portnum(),
@@ -248,6 +255,11 @@ class Account(object):
         self._m.add_scheduled_action(.02, send_rtp)
         return True
 
+    def do_rtpsave(self, callid, filename):
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+
+        self.rtp_dump_files[callid] = file(filename, 'wb')
 
     ## Handle requests
     def req_invite(self, req):
