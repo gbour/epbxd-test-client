@@ -1,18 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
+import yaml
+import optparse
 import asyncore
 from   sip import Account, Manager, Repl
 
 if __name__ == '__main__':
+    parser = optparse.OptionParser()
+    parser.add_option('-c', '--config', dest='config_file', default='/etc/epbxdclient.cfg',
+        metavar='CONFIG-FILE', help='Configuration file')
+
+    (opts, args) = parser.parse_args()
+    config = yaml.load(file(opts.config_file, 'rb').read())
+
     m = Manager()
     m.repl = Repl(m.handle)
 
     #sip.REPL = sip.Repl()
     #sips = sip.SipServer(repl)
-    for name in ('101','102'):
-        acc = Account(name,'localhost',5060)
-        #acc = Account(name,'localhost',7779)
+    for name, params in config['accounts'].iteritems():
+        (host, port) = params['registrar'].split(':')
+        acc = Account(name, host, int(port))
         m.add_account(acc)
 
         m.repl.echo("Account %s listening on %d port" % (acc.username, acc.sips.portnum()))

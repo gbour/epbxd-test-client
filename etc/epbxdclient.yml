@@ -1,0 +1,7 @@
+
+accounts:
+  101:
+    registrar: localhost:5060
+
+  102:
+    registrar: localhost:5060
