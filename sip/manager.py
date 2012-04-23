@@ -31,6 +31,35 @@ class Manager(object):
         self.accounts[accnt.username] = accnt
         accnt.set_manager(self)
 
+    def help(self, args):
+        from sip.account import Account
+        def print_help(cmd, fun, long=False):
+            print "\n %-10s" % cmd,
+            if fun.__doc__ is not None:
+                doc = fun.__doc__.strip().split('\n')
+                print "- %s" % doc[0],
+
+                if long:
+                    print ""
+                    for line in doc[1:]:
+                        print "    ", line.strip()
+            #print ""
+
+        if len(args) > 0:
+            if not hasattr(Account, 'do_'+args[0]):
+                print "Unknown *%s* command!" % args[0]; return False
+
+            fun = getattr(Account, 'do_'+args[0])
+            print_help(args[0], fun, long=True)
+            return True
+
+        # list all available commands
+        for name, fun in sorted([(name, obj) for (name, obj) in Account.__dict__.iteritems() \
+                                if name.startswith('do_')]):
+            print_help(name[3:], fun)
+
+        return True
+
     def handle(self, cmd):
         """Handle command from CLI
 
@@ -46,8 +75,10 @@ class Manager(object):
             return True
 
         parts = filter(lambda x: len(x) > 0, cmd.split(' '))
-        accnt = self.accounts.get(parts[0], None)
+        if parts[0] == 'help':
+            return self.help(parts[1:])
 
+        accnt = self.accounts.get(parts[0], None)
         if accnt is None:
             self.repl.echo("Unknown '%s' account" % parts[0]); return False
         if len(parts) < 2:

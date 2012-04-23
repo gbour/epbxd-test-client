@@ -84,9 +84,15 @@ class Account(object):
 
 
     def do_status(self, *args):
+        """Display account status
+        """
         self._m.repl.echo("%s account:\n . registration= %s" % (self.username, self._register))
 
     def do_register(self, *args):
+        """Register account at registrar.
+        Send a REGISTER command to the registar, and handle the response.
+        Usage: *account-name* register
+        """
         self._m.repl.echo("Registering %s" % self.username)
 
         def response(callid, response):
@@ -108,6 +114,11 @@ class Account(object):
         self._register = 'pending'
 
     def do_dial(self, *args):
+        """Dial a peer
+        Send an INVITE SIP command to the sip proxy.
+        Peer is local (another account on the same epbxdclient instance).
+        Usage: *from-account* dial *to-account*
+        """
         self._m.repl.echo("%s: Dialing %s" % (self.username, args[0]))
 
         def response(callid, resp):
@@ -139,6 +150,10 @@ class Account(object):
         self.rtp_ports[callid] = [rtps, None]
 
     def do_ack(self, callid, *args):
+        """Send ACK request.
+        ACK message is send regarding an active transaction
+        Usage: *account-name* ack *call-id*
+        """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
         self._m.repl.echo("Sending ACK (transaction= %s)" % callid)
@@ -160,8 +175,9 @@ class Account(object):
         })
 
     def do_ringing(self, callid, *args):
-        """Send a Ringing response
+        """Send a 180/RINGING response.
 
+        Usage: *account-name* ringing *call-id*
         """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
@@ -185,7 +201,9 @@ class Account(object):
         })
 
     def do_ok(self, callid, *args):
-        """Send a OK response
+        """Send a 200/OK response
+
+        Usage: *account-name* ok *call-id*
         """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
@@ -209,9 +227,11 @@ class Account(object):
         })
 
     def do_play(self, callid, encoding, filename):
-        """
+        """Play a sound file to a "connected" peer
+        File is sent through a RTP channel
 
-            NOTE: we presume file is in PCM A-LAW format
+        Usage: *account-name* play *call-id* *encoding* *filename*
+        NOTE : encoding is one of ulaw, alaw or gsm
         """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
@@ -256,6 +276,11 @@ class Account(object):
         return True
 
     def do_rtpsave(self, callid, filename):
+        """Save received RTP datas in a file
+        NOTE: RTP datas received before this command are not saved
+
+        Usage: *account-id* rtpsave *call-id* *filename*
+        """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
