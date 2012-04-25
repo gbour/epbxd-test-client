@@ -91,7 +91,7 @@ class Manager(object):
         return getattr(accnt, 'do_'+action)(*parts[2:])
 
 
-    def do_request(self, action, (domain, port), mapping, callback=None):
+    def do_request(self, action, server, mapping, callback=None):
         """Send request to SIP server
         """
         msg = self.raw_messages.get(action.lower(), None)
@@ -99,8 +99,9 @@ class Manager(object):
             return False
 
         mapping.update({
-            'remote_ip'    : domain,
-            'remote_port'  : port,
+            'remote_ip'    : server.host,
+            'remote_port'  : server.port,
+            #TODO: should we use server.transport ?
             'transport'    : 'TCP',
             'branch'       : mapping.get('branch'  , self.uuid()),
             'from_tag'     : mapping.get('from_tag', self.uuid()),
@@ -131,7 +132,7 @@ class Manager(object):
 
         msg = msg.replace('[len]', str(length))
 
-        conn = self.get_connection(domain, port)
+        conn = self.get_connection(server)
         print 'CONN=',conn
         try:
             self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
@@ -146,16 +147,21 @@ class Manager(object):
     def uuid(self):
         return str(uuid.uuid4())
 
-    def get_connection(self, host, port):
-        conn = self.connections.get("%s:%d" % (host, port), None)
+    def get_connection(self, server):
+        conn = self.connections.get("%s://%s:%d" % (server.transport, server.host, server.port), None)
         if conn is None:
-            conn = SipSocket(sock=None, host=host, port=port, callback=self.receive)
-            self.connections["%s:%d" % (host, port)] = conn
+            conn = SipSocket(sock=None, host=server.host, port=server.port,
+                             callback=self.receive, mode=server.transport)
+            self.connections["%s://%s:%d" % (server.transport, server.host, server.port)] = conn
 
         return conn
 
     def receive(self, sock, raw, extra):
-        self.repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
+        try:
+            self.repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
+        except:
+            # fail when using UDP transport
+            pass
         self.repl.debug(raw)
         for msg in self.decoder.decode(raw):
             self.repl.echo(str(msg))

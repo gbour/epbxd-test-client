@@ -13,16 +13,18 @@ ENCODINGS = {
     'alaw': 8,
 }
 
+from   collections import namedtuple
+Server = namedtuple('Server', ['transport','host','port'])
 
 class Account(object):
-    def __init__(self, username, domain, port=5060, transport='udp'):
+    def __init__(self, username, registrar, proxy):
         self.username  = username
-        self.domain    = domain
-        self.port      = port
-        self.transport = transport
+        self.registrar = registrar
+        self.proxy     = proxy
 
         # open client port
-        self.sips     = SipServer(self.receive, mode=transport)
+        # TODO: we should have 2 servers (1 for registrar, 1 for proxy)
+        self.sips     = SipServer(self.receive, mode=registrar.transport)
 
         self._register = 'none'
         self._cseq = self.__cseq__()
@@ -42,11 +44,11 @@ class Account(object):
             cseq += 1
             yield cseq
 
-    def receive(self, sock, data, extra):
+    def receive(self, sock, data, extra=None):
         """Receive data from private socket
         """
         self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
-        self._m.receive(sock, data)
+        self._m.receive(sock, data, extra)
 
     def receive_rtp(self, sock, data, callid):
         """Receive RTP data
@@ -104,7 +106,7 @@ class Account(object):
                 self._register = 'unauthorized'
                 self._m.repl.echo("%s registration failed (unauthorized)" % self.username)
 
-        callid = self._m.do_request('REGISTER', (self.domain, self.port), {
+        callid = self._m.do_request('REGISTER', self.registrar, {
             'cseq'       : self._cseq.next(),
             'local_ip'   : 'localhost',
             'local_port' : self.sips.portnum(),
@@ -137,7 +139,7 @@ class Account(object):
         rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
         self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
 
-        callid = self._m.do_request('INVITE', (self.domain, self.port), {
+        callid = self._m.do_request('INVITE', self.proxy, {
             'call_id'    : callid,
             'cseq'       : self._cseq.next(),
             'local_ip'   : 'localhost',
@@ -161,7 +163,7 @@ class Account(object):
 
         t = self.transactions[callid].headers
 
-        callid = self._m.do_request('ACK', (self.domain, self.port), {
+        callid = self._m.do_request('ACK', self.proxy, {
             'local_ip'   : 'localhost',
             'local_port' : self.sips.portnum(),
             'local_user' : t['from'].user,
@@ -186,7 +188,7 @@ class Account(object):
         t = self.transactions[callid].headers
         t['resp_to_tag'] = self._m.uuid()
 
-        self._m.do_request('ringing', (self.domain, self.port), {
+        self._m.do_request('ringing', self.proxy, {
             'local_ip'     : 'localhost',
             'local_port'   : self.sips.portnum(),
             'local_user'   : self.username,
@@ -212,7 +214,7 @@ class Account(object):
         t = self.transactions[callid].headers
         t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
 
-        self._m.do_request('ok', (self.domain, self.port), {
+        self._m.do_request('ok', self.proxy, {
             'local_ip'     : 'localhost',
             'local_port'   : self.sips.portnum(),
             'local_user'   : self.username,

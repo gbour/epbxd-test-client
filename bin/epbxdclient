@@ -6,6 +6,7 @@ import yaml
 import optparse
 import asyncore
 from   sip import Account, Manager, Repl
+from sip.account import Server
 
 if __name__ == '__main__':
     parser = optparse.OptionParser()
@@ -25,13 +26,16 @@ if __name__ == '__main__':
                      params['registrar'])
         if m is None:
             print 'Invalid configuration for %s' % name; continue
+        m = m.groupdict()
 
-        print m.groups()
-        acc = Account(str(name), m.group('host'), int(m.group('port')), m.group('transport'))
+        acc = Account(str(name),
+            registrar = Server(m['transport'], m['host'], int(m['port'])),
+            proxy     = Server(m['transport'], m['host'], int(m['port']))
+        )
         mngr.add_account(acc)
 
         mngr.repl.echo("Account %s listening on %d port (%s)" %\
-                      (acc.username, acc.sips.portnum(), acc.transport))
+                      (acc.username, acc.sips.portnum(), acc.registrar.transport))
     mngr.repl.flush()
 
     while True:
