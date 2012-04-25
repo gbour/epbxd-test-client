@@ -133,7 +133,11 @@ class Manager(object):
 
         conn = self.get_connection(domain, port)
         print 'CONN=',conn
-        self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
+        try:
+            self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
+        except:
+            # fail when using UDP transport
+            pass
         self.repl.debug(msg)
     
         ret  = conn.send(msg)
