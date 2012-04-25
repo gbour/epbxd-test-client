@@ -1,7 +1,8 @@
 
 accounts:
   101:
-    registrar: localhost:5060
+    # udp, tcp, tls
+    registrar: udp://localhost:5061
 
   102:
-    registrar: localhost:5060
+    registrar: udp://localhost:5061

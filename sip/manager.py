@@ -132,6 +132,7 @@ class Manager(object):
         msg = msg.replace('[len]', str(length))
 
         conn = self.get_connection(domain, port)
+        print 'CONN=',conn
         self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
         self.repl.debug(msg)
     

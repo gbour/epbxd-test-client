@@ -15,13 +15,14 @@ ENCODINGS = {
 
 
 class Account(object):
-    def __init__(self, username, domain, port=5060):
-        self.username = username
-        self.domain   = domain
-        self.port     = port
+    def __init__(self, username, domain, port=5060, transport='udp'):
+        self.username  = username
+        self.domain    = domain
+        self.port      = port
+        self.transport = transport
 
         # open client port
-        self.sips     = SipServer(self.receive)
+        self.sips     = SipServer(self.receive, mode=transport)
 
         self._register = 'none'
         self._cseq = self.__cseq__()
