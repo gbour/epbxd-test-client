@@ -18,7 +18,9 @@
 """
 __author__  = "Guillaume Bour <guillaume@bour.cc>"
 
-from repl      import Repl
-from manager   import Manager
-from sipsocket import *
-from account   import Account
+import wave
+
+class Signal(object):
+	def __init__(self, filename):
+		self.f = wave.open(filename, 'rb')
+		print self.f.getsampwidth(), self.f.getnframes(), self.f.getframerate(),self.f.getcomptype()
