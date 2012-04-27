@@ -2,3 +2,5 @@
 include AUTHORS
 include COPYING
 include README.md
+include etc/*
+include etc/patterns/*

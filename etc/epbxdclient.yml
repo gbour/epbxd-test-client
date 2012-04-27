@@ -1,4 +1,8 @@
 
+#
+patterns: ./etc/patterns
+
+# SIP accounts
 accounts:
   101:
     # udp, tcp, tls

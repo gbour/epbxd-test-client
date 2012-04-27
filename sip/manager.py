@@ -24,10 +24,10 @@ from sip.sipsocket import SipSocket
 from sip.decoder   import *
 
 class Manager(object):
-    def __init__(self):
+    def __init__(self, patterns_dir):
         self.accounts = {}
         self.sockets  = {}
-        self.raw_messages = {}
+        self.patterns = {}
 
         # transactions contains (action, state, account) tuples
         self.transactions = {}
@@ -35,9 +35,9 @@ class Manager(object):
         # servers connections
         self.connections  = {}
 
-        for filename in os.listdir('./res'):
-            with open(os.path.join('./res', filename), 'r') as f:
-                self.raw_messages[filename.lower()] = f.read()
+        for filename in os.listdir(patterns_dir):
+            with open(os.path.join(patterns_dir, filename), 'r') as f:
+                self.patterns[filename.lower()] = f.read()
 
         self.decoder = SipDecoder()
 
@@ -111,7 +111,7 @@ class Manager(object):
     def do_request(self, action, server, mapping, callback=None):
         """Send request to SIP server
         """
-        msg = self.raw_messages.get(action.lower(), None)
+        msg = self.patterns.get(action.lower(), None)
         if msg is None:
             return False
 

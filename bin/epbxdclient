@@ -33,7 +33,7 @@ if __name__ == '__main__':
     (opts, args) = parser.parse_args()
     config = yaml.load(file(opts.config_file, 'rb').read())
 
-    mngr = Manager()
+    mngr = Manager(patterns_dir=config['patterns'])
     mngr.repl = Repl(mngr.handle)
 
     #sip.REPL = sip.Repl()

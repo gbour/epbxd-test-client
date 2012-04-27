@@ -54,5 +54,6 @@ setup(
     data_files=[
         ('share/doc/python-epbxdclient', ('README.md','AUTHORS','COPYING', 'etc/epbxdclient.yml')),
         ('etc', ('etc/epbxdclient.yml',)),
+        ('var/lib/epbxdclient/patterns', ('etc/patterns/ack', 'etc/patterns/invite', 'etc/patterns/ok', 'etc/patterns/ringing')),
     ],
 )
