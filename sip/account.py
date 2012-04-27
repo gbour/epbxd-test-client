@@ -85,7 +85,6 @@ class Account(object):
         if callid in self.rtp_dump_files:
             self.rtp_dump_files[callid].write(data[12+4*rtp.cc:])
 
-
     def do_status(self, *args):
         """Display account status
         """
@@ -136,6 +135,7 @@ class Account(object):
                 self._m.repl.echo("%s: Call established" % self.username)
 
         callid = self._m.uuid()
+        # open RTP and SRTP sockets
         rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
         self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
 
@@ -211,6 +211,11 @@ class Account(object):
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
+        # open RTP and SRTP sockets
+        rtpsock = SipServer(self.rtp_receive, 'udp')
+        self._m.repl.echo("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
+        self.rtpsocks[callid] = [rtpsock, None]
+
         t = self.transactions[callid].headers
         t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
 
@@ -227,6 +232,7 @@ class Account(object):
 
             # transaction values
             'to_tag'       : t['resp_to_tag'],
+            'media_port'   : rtpsock.getsockname()[1],
         })
 
     def do_play(self, callid, encoding, filename):

@@ -42,8 +42,7 @@ class SipServer(async.dispatcher):
         self.callback = callback
         self.data     = data
 
-        self.create_socket(socket.AF_INET, 
-                socket.SOCK_DGRAM if mode == 'udp' else socket.SOCK_STREAM)
+        self.create_socket(socket.AF_INET, socket.SOCK_DGRAM if mode == 'udp' else socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind(('localhost', 0))
 
