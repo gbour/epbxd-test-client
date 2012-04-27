@@ -1,0 +1,8 @@
+
+ * detect when a socket is close (target socket) then reopen:b#
+ * autoriser les variables dans les commandes CLI
+		${last-trans} => derniere transaction utilisée
+ * coloration
+
+ * 603 Decline (refuse INVITE)
+ * BYE
