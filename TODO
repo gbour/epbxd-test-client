@@ -6,3 +6,6 @@
 
  * 603 Decline (refuse INVITE)
  * BYE
+
+ * enhance history mgmt (home, end, pageup, pagedown, !!)
+ * commands completion
