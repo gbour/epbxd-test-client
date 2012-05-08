@@ -229,9 +229,9 @@ class Account(object):
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
         # open RTP and SRTP sockets
-        rtpsock = SipServer(self.rtp_receive, 'udp')
+        rtpsock = SipServer(self.receive_rtp, 'udp')
         self._m.repl.echo("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
-        self.rtpsocks[callid] = [rtpsock, None]
+        self.rtp_ports[callid] = [rtpsock, None]
 
         t = self.transactions[callid].headers
         t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
