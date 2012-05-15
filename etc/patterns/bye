@@ -1,0 +1,10 @@
+BYE sip:[remote_user]@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+To: <sip:[remote_user]@[remote_ip]:[remote_port]>;tag=[to_tag]
+From: <sip:[local_user]@[local_ip]:[local_porþ]>;tag=[from_tag]
+Call-ID: [call_id]
+CSeq: [cseq] BYE
+User-Agent: Twinkle/1.4.2
+Max-Forwards: 70
+Content-Length: 0
+

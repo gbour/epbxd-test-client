@@ -252,6 +252,32 @@ class Account(object):
             'media_port'   : rtpsock.getsockname()[1],
         })
 
+    def do_bye(self, callid, *args):
+        """Send a BYE request.
+        Hangup an active channel
+
+        Usage: *account-name* bye *call-id*
+        """
+        if callid not in self.transactions:
+            self._m.repl.echo("Transaction %s not found!" % callid); return False
+        self._m.repl.echo("Sending BYE (transaction= %s" % callid)
+
+        t = self.transactions[callid].headers
+
+        self._m.do_request('BYE', self.proxy, {
+            'local_ip'     : 'localhost',
+            'local_port'   : self.sips.portnum(),
+            'local_user'   : self.username,
+            'remote_user': t['to'].user,
+
+            # transaction values
+            'call_id'    : callid,
+            'branch'     : t['via'].params['branch'],
+            'to_tag'     : t['to'].params['tag'],
+            'from_tag'   : t['from'].params['tag'],
+            'cseq'       : t['cseq'].sequence,
+        })
+
     def do_play(self, callid, encoding, filename):
         """Play a sound file to a "connected" peer
         File is sent through a RTP channel
@@ -333,5 +359,4 @@ class Account(object):
 
         t = self.transactions[callid].headers
         self._m.repl.echo("%s: Call established" % self.username)
-
 
