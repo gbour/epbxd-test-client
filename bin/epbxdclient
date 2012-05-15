@@ -20,6 +20,7 @@ __author__  = "Guillaume Bour <guillaume@bour.cc>"
 
 import re
 import yaml
+import time
 import optparse
 import asyncore
 from   sip import Account, Manager, Repl
@@ -58,8 +59,11 @@ if __name__ == '__main__':
     while True:
         try:
             # interrupt each 10 ms
-            asyncore.loop(timeout=.01, count=1)
+			#TODO: fail when count set not None (never wait timeout expiration)
+            #      add a time.sleep() to prevent consuming 100% cpu
+            asyncore.loop(timeout=.01, count=1, use_poll=True)
             mngr.scheduler()
+            time.sleep(.1)
 
         except KeyboardInterrupt:
             break
