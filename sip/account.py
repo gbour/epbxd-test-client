@@ -224,19 +224,13 @@ class Account(object):
         """Send a 200/OK response
 
         Usage: *account-name* ok *call-id*
+        NOTE: the OK response is contextual (may respond to INVITE or BYE requests)
         """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
 
-        # open RTP and SRTP sockets
-        rtpsock = SipServer(self.receive_rtp, 'udp')
-        self._m.repl.echo("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
-        self.rtp_ports[callid] = [rtpsock, None]
-
         t = self.transactions[callid].headers
-        t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
-
-        self._m.do_request('ok', self.proxy, {
+        headers = {
             'local_ip'     : 'localhost',
             'local_port'   : self.sips.portnum(),
             'local_user'   : self.username,
@@ -246,11 +240,26 @@ class Account(object):
             'last_From:'   : "From: "    + str(t['from']),
             'last_Call-ID:': "Call-ID: " + str(t['call-id']),
             'last_CSeq:'   : "CSeq: "    + str(t['cseq']),
+        }
 
-            # transaction values
-            'to_tag'       : t['resp_to_tag'],
-            'media_port'   : rtpsock.getsockname()[1],
-        })
+        meth = self.transactions[callid].method
+        if   meth == 'INVITE':
+            # open RTP and SRTP sockets
+            rtpsock = SipServer(self.receive_rtp, 'udp')
+            self._m.repl.echo("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
+            self.rtp_ports[callid] = [rtpsock, None]
+            headers['media_port'] = rtpsock.getsockname()[1]
+
+        elif meth == 'BYE':
+            # deleting transaction, closing RTP socket
+            self._m.repl.echo("%s: Closing RTP socket" % self.username)
+            del self.rtp_ports[callid]
+            del self.transactions[callid]
+
+
+        headers['resp_to_tag'] = t['resp_to_tag'] = t.get('resp_to_tag', self._m.uuid())
+
+        self._m.do_request('ok', self.proxy, headers)
 
     def do_bye(self, callid, *args):
         """Send a BYE request.
@@ -260,7 +269,7 @@ class Account(object):
         """
         if callid not in self.transactions:
             self._m.repl.echo("Transaction %s not found!" % callid); return False
-        self._m.repl.echo("Sending BYE (transaction= %s" % callid)
+        self._m.repl.echo("Sending BYE (transaction= %s), closing RTP socket" % callid)
 
         t = self.transactions[callid].headers
 
@@ -277,6 +286,9 @@ class Account(object):
             'from_tag'   : t['from'].params['tag'],
             'cseq'       : t['cseq'].sequence,
         })
+
+        #closing RTP socket (we don't wait BYE response)
+        del self.rtp_ports[callid]
 
     def do_play(self, callid, encoding, filename):
         """Play a sound file to a "connected" peer
@@ -360,3 +372,19 @@ class Account(object):
         t = self.transactions[callid].headers
         self._m.repl.echo("%s: Call established" % self.username)
 
+    def req_bye(self, req):
+        """receive BYE request
+
+            Save transaction
+        """
+        self.transactions[req.headers['call-id']] = req
+
+        self._m.repl.echo("%s: Ask to hangup call" % self.username)
+        return True
+
+    def req_ok(self, req):
+        t = self.transactions[req.headers['call-id']]
+        if t.method == 'BYE':
+            del self.transactions[req.headers['call-id']]
+
+        return True
