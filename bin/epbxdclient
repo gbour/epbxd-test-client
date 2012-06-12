@@ -63,7 +63,7 @@ if __name__ == '__main__':
             #      add a time.sleep() to prevent consuming 100% cpu
             asyncore.loop(timeout=.01, count=1, use_poll=True)
             mngr.scheduler()
-            time.sleep(.1)
+            time.sleep(.01)
 
         except KeyboardInterrupt:
             break
