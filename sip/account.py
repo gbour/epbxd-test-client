@@ -155,6 +155,7 @@ class Account(object):
         # open RTP and SRTP sockets
         rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
         self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
+        self._m.add_to_completion("%s hangup %s" % (self.username, callid))
 
         callid = self._m.do_request('INVITE', self.proxy, {
             'call_id'    : callid,

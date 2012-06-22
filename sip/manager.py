@@ -44,9 +44,18 @@ class Manager(object):
         # scheduled actions
         self._scheduler = []
 
+    def set_repl(self, repl):
+        self.repl = repl
+        self.completion = ManagerCompletion(self, repl.completion)
+
+    def add_to_completion(self, cmd):
+        self.repl.completion.add_command(cmd)
+
     def add_account(self, accnt):
         self.accounts[accnt.username] = accnt
         accnt.set_manager(self)
+
+        self.completion.add_account(accnt)
 
     def help(self, args):
         from sip.account import Account
@@ -225,3 +234,29 @@ class Manager(object):
 
         for x in deletes:
             self._scheduler.remove(x)
+
+
+class ManagerCompletion(object):
+    def __init__(self, mngr, completion):
+        self.mngr       = mngr
+        self.completion = completion
+
+        self.set_help()
+
+    def set_help(self):
+        # help
+        from sip.account import Account
+        for name, fun in sorted([(name, obj) for (name, obj) in Account.__dict__.iteritems() \
+                                if name.startswith('do_')]):
+            self.completion.add_command('help '+name[3:])
+
+    def add_account(self, accnt):
+        self.completion.add_command("%s register" % accnt.username)
+
+        for name in self.mngr.accounts.iterkeys():
+            if name == accnt.username:
+                continue
+
+            self.completion.add_command("%s dial %s" % (name, accnt.username))
+            self.completion.add_command("%s dial %s" % (accnt.username, name))
+

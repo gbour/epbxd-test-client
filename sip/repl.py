@@ -19,6 +19,8 @@
 __author__  = "Guillaume Bour <guillaume@bour.cc>"
 
 import sys, os, asyncore, readline, tty, termios
+from completion import Completion
+
 
 class Repl(asyncore.file_dispatcher):
     """read-eval-print loop object
@@ -26,7 +28,8 @@ class Repl(asyncore.file_dispatcher):
         working asynchroneously
     """
     def __init__(self, callback):
-        self.callback = callback
+        self.callback   = callback
+        self.completion = Completion()
 
         self.old_settings = termios.tcgetattr(sys.stdin)
         tty.setcbreak(sys.stdin.fileno())
@@ -154,6 +157,20 @@ class Repl(asyncore.file_dispatcher):
                 sys.stdout.write('\b'*l + ' '*l + '\b'*l)
                 del self.buffer[-1]
 
+            return
+
+        #tabulation
+        elif ord(c) == 9:
+            status, cmd, values = self.completion.complete(''.join(self.buffer))
+            if   status == 'invalid':
+                self.echo('command not found')
+            elif status == 'completion':
+                print
+                for val in values:
+                    print "\t", val
+
+                self.buffer = list(cmd)
+                self.flush()
             return
 
         sys.stdout.write(c)
