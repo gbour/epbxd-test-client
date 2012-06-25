@@ -53,7 +53,7 @@ if __name__ == '__main__':
         mngr.add_account(acc)
 
         mngr.repl.echo("Account %s listening on %d port (%s)" %\
-                      (acc.username, acc.sips.portnum(), acc.registrar.transport))
+                      (acc.username, acc.sips.portnum(), acc.registrar.transport), False)
     mngr.repl.flush()
 
     while True:

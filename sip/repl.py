@@ -21,6 +21,27 @@ __author__  = "Guillaume Bour <guillaume@bour.cc>"
 import sys, os, asyncore, readline, tty, termios
 from completion import Completion
 
+# console ANSI colors
+class Colors(object):
+    END    = '\033[0m'
+    BOLD   = '\033[1m'
+    RED    = '\033[91m'
+    GREEN  = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE   = '\033[94m'
+
+    status = {
+        1: BLUE,
+        2: GREEN,
+        3: YELLOW,
+        4: RED
+    }
+
+INFO      = 1
+OK        = 2
+WARNING   = 3
+ERROR     = 4
+
 
 class Repl(asyncore.file_dispatcher):
     """read-eval-print loop object
@@ -148,7 +169,7 @@ class Repl(asyncore.file_dispatcher):
 
             # flush buffer
             del self.buffer[:]
-            self.prompt(newline=True); return
+            self.prompt(ret=True); return
 
         # backspace
         elif c == '\b' or ord(c) == 127:
@@ -163,7 +184,8 @@ class Repl(asyncore.file_dispatcher):
         elif ord(c) == 9:
             status, cmd, values = self.completion.complete(''.join(self.buffer))
             if   status == 'invalid':
-                self.echo('command not found')
+                print
+                self.echo('command not found', status=ERROR)
             elif status == 'completion':
                 print
                 for val in values:
@@ -176,20 +198,31 @@ class Repl(asyncore.file_dispatcher):
         sys.stdout.write(c)
         self.buffer.append(c)
 
-    def echo(self, data, flush=False):
-        sys.stdout.write('\n'+data+'\n')
+    def echo(self, data, flush=True, status=None):
+        if status is not None:
+            data = Colors.status[status] + data + Colors.END
 
+        #1. save prompt (done in self.buffer)
+
+        #2. write datas
+        sys.stdout.write('\r' if flush else '')
+        sys.stdout.write(data+'\n')
+
+        #3. reset prompt
+        #sys.stdout.write("[.]> ")
         if flush:
             self.flush()
 
-    def flush(self):
-            self.prompt(''.join(self.buffer))
-
-    def prompt(self, content='', newline=False):
-        if newline:
+    def flush(self, content=None, ret=False):
+        if ret:
             sys.stdout.write('\n')
-        sys.stdout.write("[.]> "+content)
-
+        sys.stdout.write("\r" +
+            Colors.BOLD +
+            "$> "       +
+            Colors.END  +
+            (content if content is not None else ''.join(self.buffer))
+        )
+    prompt=flush
 
     def debug(self, data):
         self.logf.write(data)

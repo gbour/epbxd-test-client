@@ -22,6 +22,7 @@ import os, re, uuid, time
 from sip import repl
 from sip.sipsocket import SipSocket
 from sip.decoder   import *
+from sip import repl as status
 
 class Manager(object):
     def __init__(self, patterns_dir):
@@ -73,7 +74,7 @@ class Manager(object):
 
         if len(args) > 0:
             if not hasattr(Account, 'do_'+args[0]):
-                print "Unknown *%s* command!" % args[0]; return False
+                self.repl.echo("Unknown *%s* command!" % args[0], False, status.ERROR); return False
 
             fun = getattr(Account, 'do_'+args[0])
             print_help(args[0], fun, long=True)
@@ -106,14 +107,15 @@ class Manager(object):
 
         accnt = self.accounts.get(parts[0], None)
         if accnt is None:
-            self.repl.echo("Unknown '%s' account" % parts[0]); return False
+            self.repl.echo("Unknown '%s' account" % parts[0], flush=False); return False
         if len(parts) < 2:
-            self.repl.echo("No action specified"); return False
+            self.repl.echo("No action specified", flush=False); return False
 
         action = parts[1].lower()
         if not hasattr(accnt, 'do_'+action):
-            self.repl.echo("Unknown '%s' action" % action); return False
+            self.repl.echo("\nUnknown '%s' action" % action, status=status.ERROR); return False
 
+        self.repl.echo("", flush=False)
         return getattr(accnt, 'do_'+action)(*parts[2:])
 
 

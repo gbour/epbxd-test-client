@@ -22,6 +22,7 @@ import random, time, os.path
 from struct      import *
 from collections import namedtuple
 from sipsocket   import *
+import repl      as status
 
 # name and matching RTP type
 ENCODINGS = {
@@ -64,7 +65,7 @@ class Account(object):
     def receive(self, sock, data, extra=None):
         """Receive data from private socket
         """
-        self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username)
+        self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username, status=status.INFO)
         self._m.receive(sock, data, extra)
 
     def receive_rtp(self, sock, data, callid):
@@ -117,10 +118,10 @@ class Account(object):
         def response(callid, response):
             if   response.status == 200:
                 self._register = 'ok'
-                self._m.repl.echo("%s registration successful" % self.username)
+                self._m.repl.echo("%s registration successful" % self.username, status=status.OK)
             elif response.status == 401:
                 self._register = 'unauthorized'
-                self._m.repl.echo("%s registration failed (unauthorized)" % self.username)
+                self._m.repl.echo("%s registration failed (unauthorized)" % self.username, status=status.ERROR)
 
         callid = self._m.do_request('REGISTER', self.registrar, {
             'cseq'       : self._cseq.next(),
