@@ -119,7 +119,11 @@ class Manager(object):
             repl.error("Unknown '%s' action" % action, place=repl.INBETWEEN); return False
 
         repl.debug("", place=repl.INBETWEEN)
-        return getattr(accnt, 'do_'+action)(*parts[2:])
+        try:
+            return getattr(accnt, 'do_'+action)(*parts[2:])
+        except TypeError:
+            repl.error("Invalid number of arguments for '%s' action" % action, place=repl.INBETWEEN)
+            return False
 
 
     def do_request(self, action, server, mapping, callback=None):
