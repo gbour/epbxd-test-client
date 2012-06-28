@@ -122,7 +122,8 @@ class SipDecoder(object):
         except AttributeError:
             pass
         except Exception, e:
-            print e
+            #print "Exception=", e, name
+            pass
 
         return (name, value)
 
