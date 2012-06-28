@@ -122,6 +122,9 @@ class Account(object):
             elif response.status == 401:
                 self._registration = 'unauthorized'
                 repl.error("%s registration failed (unauthorized)" % self.username)
+            elif response.status == 404:
+                self._registration = 'not found'
+                repl.error("%s registration failed (not found)" % self.username)
 
         callid = self._m.do_request('REGISTER', self.registrar, {
             'cseq'       : self._cseq.next(),
@@ -152,6 +155,8 @@ class Account(object):
             elif resp.status == 200: # OK
                 self.transactions[resp.headers['call-id']] = resp
                 repl.ok("%s: Call established" % self.username)
+            elif resp.status == 503: # Unavailable
+                repl.error("%s: Service '%s' is unavailable" % (self.username, args[0]))
 
         callid = self._m.uuid()
         # open RTP and SRTP sockets
