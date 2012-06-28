@@ -22,7 +22,7 @@ import os, re, uuid, time
 from sip import repl
 from sip.sipsocket import SipSocket
 from sip.decoder   import *
-from sip import repl as status
+from sip import repl
 
 class Manager(object):
     def __init__(self, patterns_dir):
@@ -59,29 +59,34 @@ class Manager(object):
     def help(self, args):
         from sip.account import Account
         def print_help(cmd, fun, long=False):
-            print "\n %-10s" % cmd,
+            txt = list()
+            txt.append("\n %-10s" % cmd)
             if fun.__doc__ is not None:
                 doc = fun.__doc__.strip().split('\n')
-                print "- %s" % doc[0],
+                txt.append("- %s" % doc[0])
 
                 if long:
-                    print ""
+                    txt.append('\n')
                     for line in doc[1:]:
-                        print "    ", line.strip()
-            #print ""
+                        txt.append(' '*4+line.strip())
+
+            return ''.join(txt)
 
         if len(args) > 0:
             if not hasattr(Account, 'do_'+args[0]):
-                self.repl.echo("Unknown *%s* command!" % args[0], False, status.ERROR); return False
+                repl.error("Unknown *%s* command!" % args[0], place=repl.INBETWEEN); return False
 
             fun = getattr(Account, 'do_'+args[0])
-            print_help(args[0], fun, long=True)
+            repl.info(print_help(args[0], fun, long=True), place=repl.AFTER)
             return True
 
         # list all available commands
+        helps = list()
         for name, fun in sorted([(name, obj) for (name, obj) in Account.__dict__.iteritems() \
                                 if name.startswith('do_')]):
-            print_help(name[3:], fun)
+            helps.append(print_help(name[3:], fun))
+
+        repl.info(''.join(helps), place=repl.AFTER)
 
         return True
 
@@ -105,15 +110,15 @@ class Manager(object):
 
         accnt = self.accounts.get(parts[0], None)
         if accnt is None:
-            self.repl.echo("Unknown '%s' account" % parts[0], flush=False); return False
+            repl.error("Unknown *%s* account" % parts[0], place=repl.INBETWEEN); return False
         if len(parts) < 2:
-            self.repl.echo("No action specified", flush=False); return False
+            repl.error("No action specified", place=repl.INBETWEEN); return False
 
         action = parts[1].lower()
         if not hasattr(accnt, 'do_'+action):
-            self.repl.echo("\nUnknown '%s' action" % action, status=status.ERROR); return False
+            repl.error("Unknown '%s' action" % action, place=repl.INBETWEEN); return False
 
-        self.repl.echo("", flush=False)
+        repl.debug("", place=repl.INBETWEEN)
         return getattr(accnt, 'do_'+action)(*parts[2:])
 
 
@@ -161,11 +166,11 @@ class Manager(object):
         conn = self.get_connection(server)
         print 'CONN=',conn
         try:
-            self.repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
+            repl.debug("%s -> %s\n" % (conn.getsockname(), conn.getpeername()))
         except:
             # fail when using UDP transport
             pass
-        self.repl.debug(msg)
+        repl.debug(msg[:-2] if msg.endswith('\r\n\r\n') else msg)
     
         ret  = conn.send(msg)
         return mapping['call_id']
@@ -184,13 +189,13 @@ class Manager(object):
 
     def receive(self, sock, raw, extra):
         try:
-            self.repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
+            repl.debug("%s -> %s\n" % (sock.getpeername(), sock.getsockname()))
         except:
             # fail when using UDP transport
             pass
-        self.repl.debug(raw)
+        repl.debug(raw[:-2] if raw.endswith('\r\n\r\n') else raw)
         for msg in self.decoder.decode(raw):
-            self.repl.echo(str(msg))
+            repl.debug(str(msg)+'\n')
             getattr(self, 'handle_'+msg.__class__.__name__.lower())(msg)
 
     def handle_response(self, resp):
@@ -198,10 +203,11 @@ class Manager(object):
 
         trans  = self.transactions.get(callid, None)
         if trans is None:
-            self.repl.echo("transaction '%s' not found. Response ignored" % trans); return
+            repl.warning("transaction '%s' not found. Response ignored" % trans); return False
 
         if trans[-1] is not None:
-            trans[-1](callid, resp)
+            return trans[-1](callid, resp)
+        return False
 
 
     def handle_request(self, req):
@@ -211,7 +217,7 @@ class Manager(object):
         """
         username = req.headers['to'].user
         if username not in self.accounts:
-            self.repl.echo("Unknown targeted '%s' account" % username); return False
+            repl.error("Unknown targeted '%s' account" % username); return False
 
         return getattr(self.accounts[username], 'req_'+req.method.lower())(req)
 

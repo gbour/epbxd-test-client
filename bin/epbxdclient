@@ -43,7 +43,7 @@ if __name__ == '__main__':
         m = re.match("^(?P<transport>.*)://(?P<host>.*):(?P<port>\d+)$",
                      params['registrar'])
         if m is None:
-            print 'Invalid configuration for %s' % name; continue
+            repl.error("Invalid configuration for %s" % name); continue
         m = m.groupdict()
 
         acc = Account(str(name),
@@ -52,9 +52,9 @@ if __name__ == '__main__':
         )
         mngr.add_account(acc)
 
-        mngr.repl.echo("Account %s listening on %d port (%s)" %\
-                      (acc.username, acc.sips.portnum(), acc.registrar.transport), False)
-    mngr.repl.flush()
+        repl.info("Account %s listening on %d port (%s)" %\
+            (acc.username, acc.sips.portnum(), acc.registrar.transport), place=repl.BEFORE)
+    #repl.flush()
 
     while True:
         try:

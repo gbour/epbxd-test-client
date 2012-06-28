@@ -18,7 +18,6 @@
 """
 __author__  = "Guillaume Bour <guillaume@bour.cc>"
 
-from repl      import Repl
 from manager   import Manager
 from sipsocket import *
 from account   import Account

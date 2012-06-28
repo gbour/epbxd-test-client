@@ -22,7 +22,7 @@ import random, time, os.path
 from struct      import *
 from collections import namedtuple
 from sipsocket   import *
-import repl      as status
+import repl
 
 # name and matching RTP type
 ENCODINGS = {
@@ -44,7 +44,7 @@ class Account(object):
         # TODO: we should have 2 servers (1 for registrar, 1 for proxy)
         self.sips     = SipServer(self.receive, mode=registrar.transport)
 
-        self._register = 'none'
+        self._registration = 'none'
         self._cseq = self.__cseq__()
         self.transactions = {}
         self.rtp_dump_files = {}
@@ -65,13 +65,13 @@ class Account(object):
     def receive(self, sock, data, extra=None):
         """Receive data from private socket
         """
-        self._m.repl.echo("Account %s: receiving incoming message on private socket" % self.username, status=status.INFO)
+        repl.info("Account %s: receiving incoming message on private socket" % self.username)
         self._m.receive(sock, data, extra)
 
     def receive_rtp(self, sock, data, callid):
         """Receive RTP data
         """
-        self._m.repl.echo("%s: receiving RTP data (callid= %s)" % (self.username, callid))
+        repl.debug("%s: receiving RTP data (callid= %s)" % (self.username, callid))
 
         Rtp = namedtuple('Rtp', 'version padding exten cc marker ptype sequence timestamp ssrc')
         (pad1, pad2, seq, tstamp, ssrc) = unpack('!ccHII', data[:12])
@@ -97,8 +97,8 @@ class Account(object):
 
         csrcs = unpack('!' + 'I'*rtp.cc, data[12:12+4*rtp.cc])
         # RTP header
-        self._m.repl.echo("%s, csrcs=%s, payload=%d" % 
-                (str(rtp), str(csrcs),	(len(data)-12-4*rtp.cc)))
+        repl.debug("%s, csrcs=%s, payload=%d" % 
+            (str(rtp), str(csrcs), (len(data)-12-4*rtp.cc)))
 
         if callid in self.rtp_dump_files:
             self.rtp_dump_files[callid].write(data[12+4*rtp.cc:])
@@ -106,22 +106,22 @@ class Account(object):
     def do_status(self, *args):
         """Display account status
         """
-        self._m.repl.echo("%s account:\n . registration= %s" % (self.username, self._register))
+        repl.info("%s account:\n . registration= %s" % (self.username, self._registration))
 
     def do_register(self, *args):
         """Register account at registrar.
         Send a REGISTER command to the registar, and handle the response.
         Usage: *account-name* register
         """
-        self._m.repl.echo("Registering %s" % self.username)
+        repl.info("Registering %s" % self.username)
 
         def response(callid, response):
             if   response.status == 200:
-                self._register = 'ok'
-                self._m.repl.echo("%s registration successful" % self.username, status=status.OK)
+                self._registration = 'ok'
+                repl.ok("%s registration successful" % self.username)
             elif response.status == 401:
-                self._register = 'unauthorized'
-                self._m.repl.echo("%s registration failed (unauthorized)" % self.username, status=status.ERROR)
+                self._registration = 'unauthorized'
+                repl.error("%s registration failed (unauthorized)" % self.username)
 
         callid = self._m.do_request('REGISTER', self.registrar, {
             'cseq'       : self._cseq.next(),
@@ -131,7 +131,8 @@ class Account(object):
             'remote_user': self.username,
         }, response)
 
-        self._register = 'pending'
+        self._registration = 'pending'
+        return True
 
     def do_dial(self, *args):
         """Dial a peer
@@ -139,23 +140,23 @@ class Account(object):
         Peer is local (another account on the same epbxdclient instance).
         Usage: *from-account* dial *to-account*
         """
-        self._m.repl.echo("%s: Dialing %s" % (self.username, args[0]))
+        repl.info("%s: Dialing %s" % (self.username, args[0]))
 
         def response(callid, resp):
             if   resp.status == 404:
-                self._m.repl.echo("Target %s not found" % args[0])
+                repl.error("Target %s not found" % args[0])
             elif resp.status == 100: # Trying
                 pass
             elif resp.status == 180: # Ringing
-                self._m.repl.echo("Remote called endpoint '%s' is ringing" % args[0])
+                repl.warning("%s : Remote called endpoint '%s' is ringing" % (self.username, args[0]))
             elif resp.status == 200: # OK
                 self.transactions[resp.headers['call-id']] = resp
-                self._m.repl.echo("%s: Call established" % self.username)
+                repl.ok("%s: Call established" % self.username)
 
         callid = self._m.uuid()
         # open RTP and SRTP sockets
         rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
-        self._m.repl.echo("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
+        repl.debug("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
         self._m.add_to_completion("%s hangup %s" % (self.username, callid))
 
         callid = self._m.do_request('INVITE', self.proxy, {
@@ -170,6 +171,7 @@ class Account(object):
         }, response)
 
         self.rtp_ports[callid] = [rtps, None]
+        return True
 
     def do_ack(self, callid, *args):
         """Send ACK request.
@@ -177,8 +179,8 @@ class Account(object):
         Usage: *account-name* ack *call-id*
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
-        self._m.repl.echo("Sending ACK (transaction= %s)" % callid)
+            repl.error("Transaction %s not found!" % callid); return False
+        repl.info("%s : Sending ACK (transaction= %s)" % (self.username, callid))
 
         t = self.transactions[callid].headers
 
@@ -202,7 +204,7 @@ class Account(object):
         Usage: *account-name* ringing *call-id*
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
+            repl.warning("Transaction %s not found!" % callid); return False
 
         t = self.transactions[callid].headers
         t['resp_to_tag'] = self._m.uuid()
@@ -222,6 +224,8 @@ class Account(object):
             'to_tag'       : t['resp_to_tag'], # generate To tag
         })
 
+        return True
+
     def do_ok(self, callid, *args):
         """Send a 200/OK response
 
@@ -229,7 +233,7 @@ class Account(object):
         NOTE: the OK response is contextual (may respond to INVITE or BYE requests)
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
+            repl.error("Transaction %s not found!" % callid); return False
 
         t = self.transactions[callid].headers
         headers = {
@@ -246,15 +250,19 @@ class Account(object):
 
         meth = self.transactions[callid].method
         if   meth == 'INVITE':
+            repl.info("%s: Establishing call with %s" % (self.username, t['from'].displayname))
+
             # open RTP and SRTP sockets
             rtpsock = SipServer(self.receive_rtp, 'udp')
-            self._m.repl.echo("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
+            repl.debug("%s: Listening for RTP datas on %s" % (self.username, rtpsock.getsockname()))
             self.rtp_ports[callid] = [rtpsock, None]
             headers['media_port'] = rtpsock.getsockname()[1]
 
         elif meth == 'BYE':
+            repl.info("%s : Hanging up call with %s" % (self.username, t['from'].displayname))
+
             # deleting transaction, closing RTP socket
-            self._m.repl.echo("%s: Closing RTP socket" % self.username)
+            repl.debug("%s: Closing RTP socket" % self.username)
             del self.rtp_ports[callid]
             del self.transactions[callid]
 
@@ -270,8 +278,8 @@ class Account(object):
         Usage: *account-name* bye *call-id*
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
-        self._m.repl.echo("Sending BYE (transaction= %s), closing RTP socket" % callid)
+            repl.error("Transaction %s not found!" % callid); return False
+        repl.info("%s : Sending BYE (transaction= %s), closing RTP socket" % (self.username, callid))
 
         t = self.transactions[callid].headers
 
@@ -300,14 +308,14 @@ class Account(object):
         NOTE : encoding is one of ulaw, alaw or gsm
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
+            repl.error("Transaction %s not found!" % callid); return False
 
         if encoding not in ENCODINGS:
-            self._m.repl.echo("%s: unknown '%s' encoding" % (self.username, encoding))
+            repl.error("%s: unknown '%s' encoding" % (self.username, encoding))
             return False
 
         if not os.path.exists(filename):
-            self._m.repl.echo("%s: file '%s' does not exists" % (self.username,	filename))
+            repl.error("%s: file '%s' does not exists" % (self.username, filename))
             return False
 
         t = self.transactions[callid]
@@ -337,7 +345,7 @@ class Account(object):
             ns.seq += 1; ns.tstamp += 160
             return True
 
-        self._m.repl.echo("%s: start sending RTP datas" % self.username);
+        repl.debug("%s: start sending RTP datas" % self.username);
         self._m.add_scheduled_action(.02, send_rtp)
         return True
 
@@ -348,7 +356,7 @@ class Account(object):
         Usage: *account-id* rtpsave *call-id* *filename*
         """
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
+            repl.error("Transaction %s not found!" % callid); return False
 
         self.rtp_dump_files[callid] = file(filename, 'wb')
 
@@ -358,6 +366,7 @@ class Account(object):
 
             save transaction
         """
+        repl.warning("%s : Is invited by %s" % (self.username, req.headers['from'].displayname))
         self.transactions[req.headers['call-id']] = req
 
         return True
@@ -369,10 +378,10 @@ class Account(object):
         """
         callid = req.headers['call-id']
         if callid not in self.transactions:
-            self._m.repl.echo("Transaction %s not found!" % callid); return False
+            repl.error("Transaction %s not found!" % callid); return False
 
         t = self.transactions[callid].headers
-        self._m.repl.echo("%s: Call established" % self.username)
+        repl.warning("%s: Call established" % self.username)
 
     def req_bye(self, req):
         """receive BYE request
@@ -381,7 +390,7 @@ class Account(object):
         """
         self.transactions[req.headers['call-id']] = req
 
-        self._m.repl.echo("%s: Ask to hangup call" % self.username)
+        repl.warning("%s: Asked to hangup call" % self.username)
         return True
 
     def req_ok(self, req):
