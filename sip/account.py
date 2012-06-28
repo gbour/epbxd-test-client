@@ -255,7 +255,7 @@ class Account(object):
 
         meth = self.transactions[callid].method
         if   meth == 'INVITE':
-            repl.info("%s: Establishing call with %s" % (self.username, t['from'].displayname))
+            repl.info("%s: Establishing call with %s" % (self.username, getattr(t['from'], 'displayname', 'anonymous')))
 
             # open RTP and SRTP sockets
             rtpsock = SipServer(self.receive_rtp, 'udp')
@@ -264,7 +264,7 @@ class Account(object):
             headers['media_port'] = rtpsock.getsockname()[1]
 
         elif meth == 'BYE':
-            repl.info("%s : Hanging up call with %s" % (self.username, t['from'].displayname))
+            repl.info("%s : Hanging up call with %s" % (self.username, getattr(t['from'], 'displayname', 'anonymous')))
 
             # deleting transaction, closing RTP socket
             repl.debug("%s: Closing RTP socket" % self.username)
@@ -371,7 +371,7 @@ class Account(object):
 
             save transaction
         """
-        repl.warning("%s : Is invited by %s" % (self.username, req.headers['from'].displayname))
+        repl.warning("%s : Is invited by %s" % (self.username, getattr(req.headers['from'], 'displayname', 'anonymous')))
         self.transactions[req.headers['call-id']] = req
 
         return True
