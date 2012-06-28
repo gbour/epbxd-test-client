@@ -21,6 +21,22 @@ __author__  = "Guillaume Bour <guillaume@bour.cc>"
 import sys, os, asyncore, readline, tty, termios
 from completion import Completion
 
+# GLOBAL CONSTS
+#   states
+NONE      = 0
+INFO      = 1
+OK        = 2
+WARNING   = 3
+ERROR     = 4
+
+# positions
+NONE      = 0
+BEFORE    = 1
+AFTER     = 2
+REPLACE   = 4
+INBETWEEN = 10
+
+
 # console ANSI colors
 class Colors(object):
     END    = '\033[0m'
@@ -37,23 +53,19 @@ class Colors(object):
         4: RED
     }
 
-INFO      = 1
-OK        = 2
-WARNING   = 3
-ERROR     = 4
-
 
 class Repl(asyncore.file_dispatcher):
     """read-eval-print loop object
 
         working asynchroneously
     """
-    def __init__(self, callback):
+    def __init__(self, callback=None):
         self.callback   = callback
         self.completion = Completion()
 
         self.old_settings = termios.tcgetattr(sys.stdin)
         tty.setcbreak(sys.stdin.fileno())
+        #tty.setraw(sys.stdin.fileno())
     
         # bufferless stdout
         sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
@@ -111,6 +123,8 @@ class Repl(asyncore.file_dispatcher):
             self.history = self.history[-100:]
         self.curhist = None
 
+    def set_callback(self, callback):
+        self.callback = callback
 
     def cleanup(self):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
@@ -119,6 +133,7 @@ class Repl(asyncore.file_dispatcher):
 
     def handle_read(self):
         c = self.recv(1)
+        #print self.ansi_buffer, c
 
         if self.ansi_mode:
             self.ansi_buffer += c
@@ -138,7 +153,7 @@ class Repl(asyncore.file_dispatcher):
                         # erase line (5 == prompt width)
                         sys.stdout.write('\r' + ' '*(5+len(''.join(self.buffer).expandtabs())) + '\r')
                         self.buffer = list(self.history[self.curhist])
-                        self.prompt(''.join(self.buffer))
+                        self.printit(NONE,'', NONE)
 
                 elif self.ansi_buffer == '[B' and self.curhist is not None and\
                         self.curhist < len(self.history)-1:
@@ -146,7 +161,7 @@ class Repl(asyncore.file_dispatcher):
 
                         self.curhist += 1
                         self.buffer = list(self.history[self.curhist])
-                        self.prompt(''.join(self.buffer))
+                        self.printit(NONE, '', NONE)
 
 
                 self.ansi_mode = False
@@ -162,14 +177,16 @@ class Repl(asyncore.file_dispatcher):
             # do the job
             cmd = ''.join(self.buffer).strip()
 
+            delete = True
             if len(cmd) > 0:
                 self.curhist = None
                 self.add_history(cmd)
-                self.callback(cmd)
+                delete = self.callback(cmd)
 
             # flush buffer
-            del self.buffer[:]
-            self.prompt(ret=True); return
+            if delete:
+                del self.buffer[:]; self.printit(NONE,'',NONE)
+            return
 
         # backspace
         elif c == '\b' or ord(c) == 127:
@@ -184,49 +201,42 @@ class Repl(asyncore.file_dispatcher):
         elif ord(c) == 9:
             status, cmd, values = self.completion.complete(''.join(self.buffer))
             if   status == 'invalid':
-                print
-                self.echo('command not found', status=ERROR)
+                self.printit(ERROR, 'Command not found')
             elif status == 'completion':
                 print
                 for val in values:
                     print "\t", val
 
                 self.buffer = list(cmd)
-                self.flush()
+                self.printit(NONE,'',NONE)
             return
 
         sys.stdout.write(c)
         self.buffer.append(c)
 
-    def echo(self, data, flush=True, status=None):
-        if status is not None:
-            data = Colors.status[status] + data + Colors.END
+    def printit(self, status=NONE, msg="nop", place=INBETWEEN, clean=False):
+        if place == NONE:
+            sys.stdout.write(Colors.BOLD + "$> " + Colors.END)
+            sys.stdout.write(''.join(self.buffer))
+            return
 
-        #1. save prompt (done in self.buffer)
+        if status != NONE:
+            msg = Colors.status[status] + msg + Colors.END
 
-        #2. write datas
-        sys.stdout.write('\r' if flush else '')
-        sys.stdout.write(data+'\n')
+        if place & BEFORE == BEFORE or place == REPLACE:
+            sys.stdout.write('\r'+' '*100+'\r')
+            sys.stdout.write(msg)
+            
+            if place & BEFORE == BEFORE:
+                sys.stdout.write('\n'+Colors.BOLD + "$> " + Colors.END)
+                sys.stdout.write(''.join(self.buffer))
+           
+        if place & AFTER == AFTER:
+            sys.stdout.write('\n'+msg)
 
-        #3. reset prompt
-        #sys.stdout.write("[.]> ")
-        if flush:
-            self.flush()
-
-    def flush(self, content=None, ret=False):
-        if ret:
-            sys.stdout.write('\n')
-        sys.stdout.write("\r" +
-            Colors.BOLD +
-            "$> "       +
-            Colors.END  +
-            (content if content is not None else ''.join(self.buffer))
-        )
-    prompt=flush
-
-    def debug(self, data):
-        self.logf.write(data)
-        self.echo(data)
+        if place & INBETWEEN == INBETWEEN:
+            sys.stdout.write('\n' + Colors.BOLD + "$> " + Colors.END)
+            sys.stdout.write(''.join(self.buffer))
 
     def add_history(self, command):
         self.history.append(command)
@@ -237,3 +247,23 @@ class Repl(asyncore.file_dispatcher):
             NOTE: if writable() not set to False, file socket is NON-BLOCKING (using select())
         """
         return False
+
+_default = Repl()
+
+def debug(msg  , place=BEFORE, clean=False):
+    _default.printit(NONE   , msg, place)
+
+def info(msg   , place=BEFORE, clean=False):
+    _default.printit(INFO   , msg, place)
+
+def ok(msg     , place=BEFORE, clean=False):
+    _default.printit(OK     , msg, place)
+
+def warning(msg, place=BEFORE, clean=False):
+    _default.printit(WARNING, msg, place)
+
+def error(msg  , place=BEFORE, clean=False):
+    _default.printit(ERROR  , msg, place)
+
+def flush():
+    _default.printit(INFO   , "", place=AFTER)

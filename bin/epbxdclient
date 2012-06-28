@@ -23,7 +23,7 @@ import yaml
 import time
 import optparse
 import asyncore
-from   sip import Account, Manager, Repl
+from   sip import repl, Account, Manager
 from   sip.account import Server
 
 if __name__ == '__main__':
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     config = yaml.load(file(opts.config_file, 'rb').read())
 
     mngr = Manager(patterns_dir=config['patterns'])
-    mngr.set_repl(Repl(mngr.handle))
+    repl._default.set_callback(mngr.handle)
 
     #sip.REPL = sip.Repl()
     #sips = sip.SipServer(repl)

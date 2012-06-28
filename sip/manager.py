@@ -45,12 +45,10 @@ class Manager(object):
         # scheduled actions
         self._scheduler = []
 
-    def set_repl(self, repl):
-        self.repl = repl
-        self.completion = ManagerCompletion(self, repl.completion)
+        self.completion = ManagerCompletion(self, repl._default.completion)
 
     def add_to_completion(self, cmd):
-        self.repl.completion.add_command(cmd)
+        self.completion.add_command(cmd)
 
     def add_account(self, accnt):
         self.accounts[accnt.username] = accnt
@@ -251,6 +249,9 @@ class ManagerCompletion(object):
         for name, fun in sorted([(name, obj) for (name, obj) in Account.__dict__.iteritems() \
                                 if name.startswith('do_')]):
             self.completion.add_command('help '+name[3:])
+
+    def add_command(self, cmd):
+        self.completion.add_command(cmd)
 
     def add_account(self, accnt):
         self.completion.add_command("%s register" % accnt.username)
