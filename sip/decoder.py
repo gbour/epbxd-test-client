@@ -134,14 +134,15 @@ class SipDecoder(object):
             To: "101" <sip:101@localhost:58129>;tag=as2aa26b43
         """
         m =	re.match(
-            "^\s*(?:\"(?P<displayname>[^\"]*)\"\s+)?<(?P<proto>[^:]+):(?P<user>[^:@]+)@(?P<host>[^:;]+)(?::(?P<port>\d+))?>(?P<params>.*)$",
+            "^\s*(?:\"(?P<displayname>[^\"]*)\"\s+)?<(?P<proto>[^:]+):(?P<user>[^:@]+)@(?P<host>[^:;>]+)(?::(?P<port>\d+))?(?P<headers>[^>]*)>(?P<params>.*)$",
             raw
         )
         if m is None:
-            raise Exception
+            raise Exception("From header:: cannot parse header value")
 
         value  = m.groupdict()
-        value['params'] = dict(re.findall(";([^;=]+)(?:=([^;]*))", value['params']))
+        value['params']  = dict(re.findall(";([^;=]+)(?:=([^;]*))", value['params']))
+        value['headers'] = dict(re.findall(";([^;=]+)(?:=([^;]*))", value['headers']))
 
         return Header(raw, value)
 
