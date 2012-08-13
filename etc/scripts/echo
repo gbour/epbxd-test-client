@@ -1,0 +1,7 @@
+
+print "helloworld"
+
+import time
+for x in range(5):
+    print 'loop'
+    time.sleep(1)
