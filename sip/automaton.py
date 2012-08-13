@@ -62,6 +62,9 @@ class Automaton(object):
     def accounts(self):
         return self.ctrl.mngr.accounts.keys()
 
+    def printit(self, msg):
+        self.repl.automaton("[automaton] " + msg)
+
     """
     def do_quit(self):
         pass
@@ -71,12 +74,14 @@ class Automaton(object):
     """
 
 
-def exit(msg):
-    print msg
+def exit(msg=None):
+    if msg is not None:
+        printit(msg)
+    #TODO: at now, only exit sub-process. Must initiate program end sequence
     sys.exit()
 
 def printit(msg):
-    print msg
+    _automaton.printit(msg)
 
 def accounts():
     return [AccountProxy(name) for name in _automaton.accounts()]

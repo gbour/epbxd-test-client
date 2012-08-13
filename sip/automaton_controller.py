@@ -24,7 +24,7 @@ class AutomatonController(object):
             self.ctrl = None
 
     def _controller(self, scriptname):
-        repl.info('[automaton] controller process launched')
+        repl.automaton('[automaton] controller process launched')
         self.threads  = dict()
         self.pendings = dict()
         self.timers   = list()
@@ -33,6 +33,7 @@ class AutomatonController(object):
         self.eventLocks = dict()
     
         automaton._automaton.set_ctrl(self)
+        automaton._automaton.repl = repl
 
         xlocals = dict([(name, getattr(automaton, name)) for name in automaton.__all__])
         print xlocals
@@ -40,7 +41,7 @@ class AutomatonController(object):
         self.threads['main'] = t
 
         t.start()
-        repl.info("[automaton] executing '%s' script" % scriptname)
+        repl.automaton("[automaton] executing '%s' script" % scriptname)
         while True:
             time.sleep(.1)
             for name in list(self.threads.keys()):
@@ -55,7 +56,7 @@ class AutomatonController(object):
                     self.timers.remove((clock,clb,args))
 
             if len(self.threads) == 0 and len(self.pendings) == 0 and len(self.timers) == 0:
-                repl.info("[automaton] script execution ended"); break
+                repl.automaton("[automaton] script '%s' ended" % scriptname); break
 
     def doaction(self, action):
         """ new action triggered from script """
@@ -74,4 +75,4 @@ class AutomatonController(object):
         if action.timeout > 0:
             self.timers.append((time.time()+action.timeout, ontimeout, (callid,)))
         
-        repl.info("[automaton] pending action %s (with %d timeout)" % (callid, action.timeout))
+        repl.automaton("[automaton] pending action %s (with %d timeout)" % (callid, action.timeout))

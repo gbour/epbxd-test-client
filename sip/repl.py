@@ -45,12 +45,15 @@ class Colors(object):
     GREEN  = '\033[92m'
     YELLOW = '\033[93m'
     BLUE   = '\033[94m'
+    ORANGE = '\033[0;30;43m'
 
     status = {
         1: BLUE,
         2: GREEN,
         3: YELLOW,
-        4: RED
+        4: RED,
+        # automaton
+        5: ORANGE,
     }
 
 
@@ -264,6 +267,10 @@ def warning(msg, place=BEFORE, clean=False):
 
 def error(msg  , place=BEFORE, clean=False):
     _default.printit(ERROR  , msg, place)
+
+# reserved for automaton
+def automaton(msg, place=BEFORE):
+    _default.printit(5, msg, place)
 
 def flush():
     _default.printit(INFO   , "", place=AFTER)

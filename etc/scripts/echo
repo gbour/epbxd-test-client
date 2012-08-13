@@ -1,7 +1,10 @@
 
 print "helloworld"
+printit("helloworld")
 
 import time
 for x in range(5):
-    print 'loop'
+    printit("loop %d" % x)
     time.sleep(1)
+
+exit("end of 'echo'")
