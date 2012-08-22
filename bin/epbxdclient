@@ -81,5 +81,5 @@ if __name__ == '__main__':
             break
 
     print '\nend...'
-    mngr.repl.cleanup()
+    repl._default.cleanup()
 
