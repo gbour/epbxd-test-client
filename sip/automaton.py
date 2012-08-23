@@ -1,7 +1,8 @@
 # -*- coding: UTF8 -*-
 import sys
+import threading
 
-__all__ = ['exit', 'printit', 'accounts']
+__all__ = ['exit', 'printit', 'accounts', 'sync']
 
 """
 class OnResponse(object):
@@ -29,6 +30,9 @@ class Action(object):
         self.timeout    = timeout
         self.callbacks  = callbacks
 
+        self.lock       = threading.Lock()
+        self.lock.acquire()
+
         _automaton.register(self)
 
     def serialize(self):
@@ -46,6 +50,10 @@ class Action(object):
     def trigger(self, event, *args, **kwargs):
         if event in self.callbacks:
             self.callbacks[event](self, *args, **kwargs)
+
+    def unlock(self, status):
+        self.status = status
+        self.lock.release()
 
 class AccountProxy(object):
     def __init__(self, name):
@@ -101,6 +109,23 @@ def printit(msg):
 def accounts():
     return [AccountProxy(name) for name in _automaton.accounts()]
 
+class sync():
+    def __init__(self, *states):
+        self.states = states
+
+    def __enter__(self):
+        print "sync:entering"
+        status = False
+        for state in self.states:
+            # lock until state updated
+            state.lock.acquire()
+            print "sync:unlocked:", state.originator
+            status = status and state.status
+
+        return status
+
+    def __exit__(self, type, value, traceback):
+        pass
 
 _automaton = Automaton()
 # Exporting action methods

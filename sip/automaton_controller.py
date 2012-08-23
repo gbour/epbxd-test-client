@@ -69,21 +69,25 @@ class AutomatonController(object):
             ref = time.time()
             for (clock, actionid) in self.timers:
                 if clock <= ref:
-                    act = self.actions[actionid].callbacks['timeout']
+                    action = self.actions[actionid]
+                    # unlock thread
+                    action.unlock(False)
 
-                    # xlocals is enriched with variables declared in script previously executed
-                    xglobals = dict(self.xlocals)
-                    xglobals['__builtins__'] = globals()['__builtins__']
-                    #http://stackoverflow.com/questions/4558104/python-evalcompile-sandbox-globals-go-in-sandbox-unless-in-def-why
-                    callback = type(act)(
-                        act.func_code, xglobals,
-                        act.func_name, act.func_defaults, act.func_closure
-                    )
+                    act    = action.callbacks['timeout']
+                    if act is not None:
+                        # xlocals is enriched with variables declared in script previously executed
+                        xglobals = dict(self.xlocals)
+                        xglobals['__builtins__'] = globals()['__builtins__']
+                        #http://stackoverflow.com/questions/4558104/python-evalcompile-sandbox-globals-go-in-sandbox-unless-in-def-why
+                        callback = type(act)(
+                            act.func_code, xglobals,
+                            act.func_name, act.func_defaults, act.func_closure
+                        )
 
-                    t = threading.Thread(target=callback, args=(self.actions[actionid].originator,))
-                    self.threads['loop'] = t
-                    t.start()
-
+                        t = threading.Thread(target=callback, args=(self.actions[actionid].originator,))
+                        self.threads['loop'] = t
+                        t.start()
+                    
                     #TODO: notify main controller to stop monitoring this action
                     # for an answer
                     self.timers.remove((clock,actionid))
@@ -95,8 +99,10 @@ class AutomatonController(object):
 
                 act = None
                 if response.status >= 200 and response.status < 300:
+                    action.unlock(True)
                     act = action.callbacks['ok']
                 elif response.status >= 400:
+                    action.unlock(False)
                     act = action.callbacks['error']
 
                 if act is not None:

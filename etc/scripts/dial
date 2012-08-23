@@ -1,0 +1,14 @@
+
+printit("register and dial")
+print "accounts=", [a.name for a in accounts()]
+(acc1, acc2) = accounts()[:2]
+
+state1 = acc1.register(timeout=1)
+state2 = acc2.register(timeout=3)
+
+# wait for both actions state change (sync() force linearity)
+printit("wait for both accounts %s and %s registration" % (acc1, acc2))
+with sync(state1, state2) as status:
+    print "registration successful:", status
+
+printit("end...")
