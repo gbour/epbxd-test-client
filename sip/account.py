@@ -165,7 +165,10 @@ class Account(object):
         # open RTP and SRTP sockets
         rtps = SipServer(self.receive_rtp, mode='udp', data=callid)
         repl.debug("%s: Opening RTP socket %d/udp" % (self.username,	rtps.getsockname()[1]))
-        self._m.add_to_completion("%s hangup %s" % (self.username, callid))
+        #self._m.add_to_completion("%s hangup %s" % (self.username, callid))
+        self._m.add_to_completion("%s bye %s" % (self.username, callid))
+        self._m.add_to_completion("%s cancel %s" % (self.username, callid))
+        self._m.add_to_completion("%s ack %s" % (self.username, callid))
 
         callid = self._m.do_request('INVITE', self.proxy, {
             'call_id'    : callid,
